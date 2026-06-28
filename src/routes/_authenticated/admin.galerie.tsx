@@ -39,17 +39,16 @@ function AdminGalerie() {
   });
 
   const itemsQ = useQuery({
-    queryKey: ["admin-gallery"],
     queryFn: async () => {
-      const { data } = await supabase.from("gallery_items" as any).select("*, activities(titre,date_activite)").order("created_at", { ascending: false });
-      const items = data ?? [];
-      await Promise.all(items.map(async (it: any) => {
-        if (!it.url) return;
-        const { data: s } = await supabase.storage.from("gallery").createSignedUrl(it.url, 3600);
-        it.signed = s?.signedUrl;
-      }));
-      return items;
-    },
+  const { data } = await supabase.from("gallery_items" as any).select("*, activities(titre,date_activite)").order("created_at", { ascending: false });
+  const items = data ?? [];
+  items.forEach((it: any) => {
+    if (it.url) {
+      it.signed = `https://fusdsccsbshurstsvwmv.supabase.co/storage/v1/object/public/gallery/${it.url}`;
+    }
+  });
+  return items;
+},
   });
 
   async function upload(e: React.FormEvent) {
