@@ -1,0 +1,13 @@
+<!DOCTYPE html>
+<html>
+<head><title>Connexion...</title></head>
+<body>
+<script>
+  var hash = window.location.hash;
+  if (hash && hash.includes('access_token')) {
+    localStorage.setItem('supabase_oauth_hash', hash);
+  }
+  window.location.replace('/auth-callback');
+</script>
+</body>
+</html>
