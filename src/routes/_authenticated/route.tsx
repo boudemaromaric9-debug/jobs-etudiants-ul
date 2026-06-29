@@ -12,7 +12,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 import { formatDistanceToNow } from "date-fns";
 import { fr } from "date-fns/locale";
-import ulLogoAsset from "@/assets/ul-logo.jpg";
+import ulLogo from "@/assets/ul-logo.jpg";
 
 export const Route = createFileRoute("/_authenticated")({
   ssr: false,
@@ -31,7 +31,6 @@ function AuthenticatedLayout() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const [mobileOpen, setMobileOpen] = useState(false);
 
-  // Profile (for avatar)
   const profileQ = useQuery({
     queryKey: ["profile", user?.id],
     enabled: !!user,
@@ -70,7 +69,6 @@ function AuthenticatedLayout() {
   return (
     <div className="min-h-screen bg-background text-foreground">
       <div className="flex">
-        {/* Sidebar */}
         <aside className={cn(
           "fixed inset-y-0 left-0 z-40 flex w-72 transform flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground transition-transform md:sticky md:top-0 md:h-screen md:translate-x-0",
           mobileOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
@@ -78,7 +76,7 @@ function AuthenticatedLayout() {
           <div className="flex h-16 items-center justify-between gap-2 border-b border-sidebar-border px-4">
             <Link to="/dashboard" className="flex items-center gap-2.5 min-w-0">
               <div className="grid h-9 w-9 shrink-0 place-items-center overflow-hidden rounded-lg bg-white ring-1 ring-white/20">
-                <img src={ulLogoAsset.url} alt="Logo Université de Lomé" className="h-full w-full object-contain p-0.5" />
+                <img src={ulLogo} alt="Logo Université de Lomé" className="h-full w-full object-contain p-0.5" />
               </div>
               <div className="font-display text-sm font-bold leading-tight min-w-0">
                 JOBS ÉTUDIANTS
@@ -137,7 +135,6 @@ function AuthenticatedLayout() {
         {mobileOpen && <div className="fixed inset-0 z-30 bg-black/60 backdrop-blur-sm md:hidden" onClick={() => setMobileOpen(false)} />}
 
         <main className="flex min-h-screen min-w-0 flex-1 flex-col">
-          {/* Top bar */}
           <header className="sticky top-0 z-20 flex h-16 items-center gap-3 border-b border-border bg-background/80 px-4 backdrop-blur-xl md:px-6">
             <Button size="icon" variant="ghost" className="md:hidden" onClick={() => setMobileOpen(true)}>
               <Menu className="h-5 w-5" />
@@ -328,4 +325,3 @@ function NotificationBell() {
     </Popover>
   );
 }
-
