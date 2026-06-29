@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { LayoutDashboard, Calendar, ClipboardList, User, ShieldCheck, LogOut, Menu, Megaphone, Users, Wallet, BarChart3, Search, Bell, X, CheckCheck, Inbox, Image as ImageIcon } from "lucide-react";
+import { LayoutDashboard, Calendar, ClipboardList, User, ShieldCheck, LogOut, Menu, Megaphone, Users, Wallet, BarChart3, Search, Bell, X, CheckCheck, Inbox, Image as ImageIcon, ScanLine } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
@@ -25,7 +25,7 @@ export const Route = createFileRoute("/_authenticated")({
 });
 
 function AuthenticatedLayout() {
-  const { isAdmin, user } = useAuth();
+  const { isAdmin, isSubAdmin, user } = useAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
@@ -78,7 +78,7 @@ function AuthenticatedLayout() {
           <div className="flex h-16 items-center justify-between gap-2 border-b border-sidebar-border px-4">
             <Link to="/dashboard" className="flex items-center gap-2.5 min-w-0">
               <div className="grid h-9 w-9 shrink-0 place-items-center overflow-hidden rounded-lg bg-white ring-1 ring-white/20">
-                <img src={ulLogoAsset} alt="Logo Université de Lomé" className="h-full w-full object-contain p-0.5" />
+                <img src={ulLogoAsset.url} alt="Logo Université de Lomé" className="h-full w-full object-contain p-0.5" />
               </div>
               <div className="font-display text-sm font-bold leading-tight min-w-0">
                 JOBS ÉTUDIANTS
@@ -97,6 +97,14 @@ function AuthenticatedLayout() {
                 <NavItem key={item.to} item={item} pathname={pathname} onClick={() => setMobileOpen(false)} />
               ))}
             </div>
+            {(isAdmin || isSubAdmin) && (
+              <>
+                <div className="mt-5 px-3 pb-1 pt-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-accent/90">Terrain</div>
+                <div className="flex flex-col gap-0.5">
+                  <NavItem item={{ to: "/scanner", icon: ScanLine, label: "Scanner QR" }} pathname={pathname} onClick={() => setMobileOpen(false)} />
+                </div>
+              </>
+            )}
             {isAdmin && (
               <>
                 <div className="mt-5 px-3 pb-1 pt-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-accent/90">Administration</div>
@@ -117,7 +125,7 @@ function AuthenticatedLayout() {
               </Avatar>
               <div className="min-w-0 flex-1">
                 <div className="truncate text-xs font-semibold">{user?.email}</div>
-                <div className="text-[10px] text-sidebar-foreground/60">{isAdmin ? "Administrateur" : "Étudiant"}</div>
+                <div className="text-[10px] text-sidebar-foreground/60">{isAdmin ? "Administrateur" : isSubAdmin ? "Sous-administrateur" : "Étudiant"}</div>
               </div>
               <Button size="icon" variant="ghost" onClick={handleSignOut} className="h-8 w-8 text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground" title="Se déconnecter">
                 <LogOut className="h-4 w-4" />

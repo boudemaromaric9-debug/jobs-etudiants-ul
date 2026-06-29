@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { CheckCircle2, XCircle, Pause, Play, Search } from "lucide-react";
+import { CheckCircle2, XCircle, Pause, Play, Search, ScanLine } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/admin/etudiants")({
   head: () => ({ meta: [{ title: "Étudiants — Admin" }] }),
@@ -29,11 +29,37 @@ function EtudiantsAdmin() {
     },
   });
 
+  const rolesQ = useQuery({
+    queryKey: ["admin-all-roles"],
+    queryFn: async () => {
+      const { data } = await supabase.from("user_roles").select("user_id, role");
+      return data ?? [];
+    },
+  });
+  const roleMap = new Map<string, Set<string>>();
+  (rolesQ.data ?? []).forEach((r) => {
+    if (!roleMap.has(r.user_id)) roleMap.set(r.user_id, new Set());
+    roleMap.get(r.user_id)!.add(r.role);
+  });
+
   async function setStatus(id: string, status: "active" | "pending" | "suspended") {
     const { error } = await supabase.from("profiles").update({ status }).eq("id", id);
     if (error) { toast.error(error.message); return; }
     toast.success("Statut mis à jour");
     qc.invalidateQueries({ queryKey: ["admin-profiles"] });
+  }
+
+  async function toggleSubAdmin(userId: string, isSub: boolean) {
+    if (isSub) {
+      const { error } = await supabase.from("user_roles").delete().eq("user_id", userId).eq("role", "sub_admin");
+      if (error) { toast.error(error.message); return; }
+      toast.success("Rôle sous-admin retiré");
+    } else {
+      const { error } = await supabase.from("user_roles").insert({ user_id: userId, role: "sub_admin" });
+      if (error) { toast.error(error.message); return; }
+      toast.success("Rôle sous-admin attribué");
+    }
+    qc.invalidateQueries({ queryKey: ["admin-all-roles"] });
   }
 
   const filtered = (q.data ?? []).filter((p) => {
@@ -82,16 +108,23 @@ function EtudiantsAdmin() {
                       <td className="px-4 py-3 text-muted-foreground">{p.faculte || "—"} · {p.niveau || "—"}</td>
                       <td className="px-4 py-3 text-muted-foreground">{p.telephone || p.email || "—"}</td>
                       <td className="px-4 py-3">
-                        <Badge variant={p.status === "active" ? "default" : p.status === "pending" ? "secondary" : "destructive"}>
-                          {p.status === "active" ? "Actif" : p.status === "pending" ? "En attente" : "Suspendu"}
-                        </Badge>
+                        <div className="flex flex-wrap items-center gap-1">
+                          <Badge variant={p.status === "active" ? "default" : p.status === "pending" ? "secondary" : "destructive"}>
+                            {p.status === "active" ? "Actif" : p.status === "pending" ? "En attente" : "Suspendu"}
+                          </Badge>
+                          {roleMap.get(p.id)?.has("admin") && <Badge variant="outline" className="border-accent text-accent">Admin</Badge>}
+                          {roleMap.get(p.id)?.has("sub_admin") && <Badge variant="outline" className="border-primary text-primary"><ScanLine className="mr-1 h-3 w-3" />Sous-admin</Badge>}
+                        </div>
                       </td>
                       <td className="px-4 py-3 text-right">
-                        <div className="flex justify-end gap-1">
+                        <div className="flex flex-wrap justify-end gap-1">
                           {p.status !== "active" && <Button size="sm" variant="outline" onClick={() => setStatus(p.id, "active")}><CheckCircle2 className="mr-1 h-4 w-4" />Valider</Button>}
                           {p.status === "active" && <Button size="sm" variant="outline" onClick={() => setStatus(p.id, "suspended")}><Pause className="mr-1 h-4 w-4" />Suspendre</Button>}
                           {p.status === "suspended" && <Button size="sm" variant="outline" onClick={() => setStatus(p.id, "active")}><Play className="mr-1 h-4 w-4" />Réactiver</Button>}
                           {p.status === "pending" && <Button size="sm" variant="ghost" onClick={() => setStatus(p.id, "suspended")}><XCircle className="mr-1 h-4 w-4" />Rejeter</Button>}
+                          <Button size="sm" variant={roleMap.get(p.id)?.has("sub_admin") ? "secondary" : "outline"} onClick={() => toggleSubAdmin(p.id, !!roleMap.get(p.id)?.has("sub_admin"))}>
+                            <ScanLine className="mr-1 h-4 w-4" />{roleMap.get(p.id)?.has("sub_admin") ? "Retirer sous-admin" : "Promouvoir sous-admin"}
+                          </Button>
                         </div>
                       </td>
                     </tr>

@@ -18,13 +18,16 @@ import { Route as AuthCallbackRouteImport } from './routes/auth-callback'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AuthenticatedScannerRouteImport } from './routes/_authenticated/scanner'
 import { Route as AuthenticatedProfilRouteImport } from './routes/_authenticated/profil'
 import { Route as AuthenticatedDisponibilitesRouteImport } from './routes/_authenticated/disponibilites'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedCallbackRouteImport } from './routes/_authenticated/callback'
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
 import { Route as AuthenticatedActivitesRouteImport } from './routes/_authenticated/activites'
+import { Route as AuthenticatedScannerIndexRouteImport } from './routes/_authenticated/scanner.index'
 import { Route as AuthenticatedAdminIndexRouteImport } from './routes/_authenticated/admin.index'
+import { Route as AuthenticatedScannerActivityIdRouteImport } from './routes/_authenticated/scanner.$activityId'
 import { Route as AuthenticatedAdminStatistiquesRouteImport } from './routes/_authenticated/admin.statistiques'
 import { Route as AuthenticatedAdminPaiementsRouteImport } from './routes/_authenticated/admin.paiements'
 import { Route as AuthenticatedAdminGalerieRouteImport } from './routes/_authenticated/admin.galerie'
@@ -76,6 +79,11 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedScannerRoute = AuthenticatedScannerRouteImport.update({
+  id: '/scanner',
+  path: '/scanner',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedProfilRoute = AuthenticatedProfilRouteImport.update({
   id: '/profil',
   path: '/profil',
@@ -107,11 +115,23 @@ const AuthenticatedActivitesRoute = AuthenticatedActivitesRouteImport.update({
   path: '/activites',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedScannerIndexRoute =
+  AuthenticatedScannerIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => AuthenticatedScannerRoute,
+  } as any)
 const AuthenticatedAdminIndexRoute = AuthenticatedAdminIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => AuthenticatedAdminRoute,
 } as any)
+const AuthenticatedScannerActivityIdRoute =
+  AuthenticatedScannerActivityIdRouteImport.update({
+    id: '/$activityId',
+    path: '/$activityId',
+    getParentRoute: () => AuthenticatedScannerRoute,
+  } as any)
 const AuthenticatedAdminStatistiquesRoute =
   AuthenticatedAdminStatistiquesRouteImport.update({
     id: '/statistiques',
@@ -164,13 +184,16 @@ export interface FileRoutesByFullPath {
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/disponibilites': typeof AuthenticatedDisponibilitesRoute
   '/profil': typeof AuthenticatedProfilRoute
+  '/scanner': typeof AuthenticatedScannerRouteWithChildren
   '/admin/activites': typeof AuthenticatedAdminActivitesRoute
   '/admin/annonces': typeof AuthenticatedAdminAnnoncesRoute
   '/admin/etudiants': typeof AuthenticatedAdminEtudiantsRoute
   '/admin/galerie': typeof AuthenticatedAdminGalerieRoute
   '/admin/paiements': typeof AuthenticatedAdminPaiementsRoute
   '/admin/statistiques': typeof AuthenticatedAdminStatistiquesRoute
+  '/scanner/$activityId': typeof AuthenticatedScannerActivityIdRoute
   '/admin/': typeof AuthenticatedAdminIndexRoute
+  '/scanner/': typeof AuthenticatedScannerIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -192,7 +215,9 @@ export interface FileRoutesByTo {
   '/admin/galerie': typeof AuthenticatedAdminGalerieRoute
   '/admin/paiements': typeof AuthenticatedAdminPaiementsRoute
   '/admin/statistiques': typeof AuthenticatedAdminStatistiquesRoute
+  '/scanner/$activityId': typeof AuthenticatedScannerActivityIdRoute
   '/admin': typeof AuthenticatedAdminIndexRoute
+  '/scanner': typeof AuthenticatedScannerIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -211,13 +236,16 @@ export interface FileRoutesById {
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/disponibilites': typeof AuthenticatedDisponibilitesRoute
   '/_authenticated/profil': typeof AuthenticatedProfilRoute
+  '/_authenticated/scanner': typeof AuthenticatedScannerRouteWithChildren
   '/_authenticated/admin/activites': typeof AuthenticatedAdminActivitesRoute
   '/_authenticated/admin/annonces': typeof AuthenticatedAdminAnnoncesRoute
   '/_authenticated/admin/etudiants': typeof AuthenticatedAdminEtudiantsRoute
   '/_authenticated/admin/galerie': typeof AuthenticatedAdminGalerieRoute
   '/_authenticated/admin/paiements': typeof AuthenticatedAdminPaiementsRoute
   '/_authenticated/admin/statistiques': typeof AuthenticatedAdminStatistiquesRoute
+  '/_authenticated/scanner/$activityId': typeof AuthenticatedScannerActivityIdRoute
   '/_authenticated/admin/': typeof AuthenticatedAdminIndexRoute
+  '/_authenticated/scanner/': typeof AuthenticatedScannerIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -236,13 +264,16 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/disponibilites'
     | '/profil'
+    | '/scanner'
     | '/admin/activites'
     | '/admin/annonces'
     | '/admin/etudiants'
     | '/admin/galerie'
     | '/admin/paiements'
     | '/admin/statistiques'
+    | '/scanner/$activityId'
     | '/admin/'
+    | '/scanner/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -264,7 +295,9 @@ export interface FileRouteTypes {
     | '/admin/galerie'
     | '/admin/paiements'
     | '/admin/statistiques'
+    | '/scanner/$activityId'
     | '/admin'
+    | '/scanner'
   id:
     | '__root__'
     | '/'
@@ -282,13 +315,16 @@ export interface FileRouteTypes {
     | '/_authenticated/dashboard'
     | '/_authenticated/disponibilites'
     | '/_authenticated/profil'
+    | '/_authenticated/scanner'
     | '/_authenticated/admin/activites'
     | '/_authenticated/admin/annonces'
     | '/_authenticated/admin/etudiants'
     | '/_authenticated/admin/galerie'
     | '/_authenticated/admin/paiements'
     | '/_authenticated/admin/statistiques'
+    | '/_authenticated/scanner/$activityId'
     | '/_authenticated/admin/'
+    | '/_authenticated/scanner/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -368,6 +404,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated/scanner': {
+      id: '/_authenticated/scanner'
+      path: '/scanner'
+      fullPath: '/scanner'
+      preLoaderRoute: typeof AuthenticatedScannerRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/profil': {
       id: '/_authenticated/profil'
       path: '/profil'
@@ -410,12 +453,26 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedActivitesRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/scanner/': {
+      id: '/_authenticated/scanner/'
+      path: '/'
+      fullPath: '/scanner/'
+      preLoaderRoute: typeof AuthenticatedScannerIndexRouteImport
+      parentRoute: typeof AuthenticatedScannerRoute
+    }
     '/_authenticated/admin/': {
       id: '/_authenticated/admin/'
       path: '/'
       fullPath: '/admin/'
       preLoaderRoute: typeof AuthenticatedAdminIndexRouteImport
       parentRoute: typeof AuthenticatedAdminRoute
+    }
+    '/_authenticated/scanner/$activityId': {
+      id: '/_authenticated/scanner/$activityId'
+      path: '/$activityId'
+      fullPath: '/scanner/$activityId'
+      preLoaderRoute: typeof AuthenticatedScannerActivityIdRouteImport
+      parentRoute: typeof AuthenticatedScannerRoute
     }
     '/_authenticated/admin/statistiques': {
       id: '/_authenticated/admin/statistiques'
@@ -485,6 +542,19 @@ const AuthenticatedAdminRouteChildren: AuthenticatedAdminRouteChildren = {
 const AuthenticatedAdminRouteWithChildren =
   AuthenticatedAdminRoute._addFileChildren(AuthenticatedAdminRouteChildren)
 
+interface AuthenticatedScannerRouteChildren {
+  AuthenticatedScannerActivityIdRoute: typeof AuthenticatedScannerActivityIdRoute
+  AuthenticatedScannerIndexRoute: typeof AuthenticatedScannerIndexRoute
+}
+
+const AuthenticatedScannerRouteChildren: AuthenticatedScannerRouteChildren = {
+  AuthenticatedScannerActivityIdRoute: AuthenticatedScannerActivityIdRoute,
+  AuthenticatedScannerIndexRoute: AuthenticatedScannerIndexRoute,
+}
+
+const AuthenticatedScannerRouteWithChildren =
+  AuthenticatedScannerRoute._addFileChildren(AuthenticatedScannerRouteChildren)
+
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedActivitesRoute: typeof AuthenticatedActivitesRoute
   AuthenticatedAdminRoute: typeof AuthenticatedAdminRouteWithChildren
@@ -492,6 +562,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedDisponibilitesRoute: typeof AuthenticatedDisponibilitesRoute
   AuthenticatedProfilRoute: typeof AuthenticatedProfilRoute
+  AuthenticatedScannerRoute: typeof AuthenticatedScannerRouteWithChildren
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
@@ -501,6 +572,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedDisponibilitesRoute: AuthenticatedDisponibilitesRoute,
   AuthenticatedProfilRoute: AuthenticatedProfilRoute,
+  AuthenticatedScannerRoute: AuthenticatedScannerRouteWithChildren,
 }
 
 const AuthenticatedRouteRouteWithChildren =

@@ -25,6 +25,7 @@ const empty = {
   titre: "", description: "", type: "nettoyage_amphi",
   date_activite: "", heure_debut: "08:00", heure_fin: "12:00",
   lieu: "", max_participants: 20, remuneration: 5000, responsable: "", responsable_id: "",
+  split_etudiant: 0.75,
   status: "draft" as "draft" | "open" | "closed" | "cancelled" | "completed",
 };
 
@@ -59,14 +60,15 @@ function AdminActivites() {
       titre: a.titre, description: a.description || "", type: a.type,
       date_activite: a.date_activite, heure_debut: a.heure_debut, heure_fin: a.heure_fin,
       lieu: a.lieu, max_participants: a.max_participants, remuneration: a.remuneration,
-      responsable: a.responsable || "", responsable_id: a.responsable_id || "", status: a.status,
+      responsable: a.responsable || "", responsable_id: a.responsable_id || "",
+      split_etudiant: a.split_etudiant ?? 0.75, status: a.status,
     });
     setOpen(true);
   }
 
   async function save(e: React.FormEvent) {
     e.preventDefault();
-    const payload: any = { ...form, max_participants: Number(form.max_participants), remuneration: Number(form.remuneration) };
+    const payload: any = { ...form, max_participants: Number(form.max_participants), remuneration: Number(form.remuneration), split_etudiant: Math.min(1, Math.max(0, Number(form.split_etudiant))) };
     if (!payload.responsable_id) payload.responsable_id = null;
     if (editing) {
       const { error } = await supabase.from("activities").update(payload).eq("id", editing.id);
@@ -112,6 +114,9 @@ function AdminActivites() {
                 <div><Label>Heure fin</Label><Input type="time" value={form.heure_fin} onChange={(e) => setForm({ ...form, heure_fin: e.target.value })} required /></div>
                 <div><Label>Participants max</Label><Input type="number" min="1" max="500" value={form.max_participants} onChange={(e) => setForm({ ...form, max_participants: e.target.value })} required /></div>
                 <div><Label>Rémunération (FCFA)</Label><Input type="number" min="0" value={form.remuneration} onChange={(e) => setForm({ ...form, remuneration: e.target.value })} required /></div>
+                <div><Label>Part étudiant (%)</Label><Input type="number" min="0" max="100" step="1" value={Math.round((form.split_etudiant ?? 0.75) * 100)} onChange={(e) => setForm({ ...form, split_etudiant: Number(e.target.value) / 100 })} required />
+                  <p className="mt-1 text-[10px] text-muted-foreground">Le reste ({100 - Math.round((form.split_etudiant ?? 0.75) * 100)}%) revient à l'institution.</p>
+                </div>
                 <div className="sm:col-span-2"><Label>Responsable d'équipe (étudiant ou admin)</Label>
                   <Select value={form.responsable_id || "none"} onValueChange={(v) => setForm({ ...form, responsable_id: v === "none" ? "" : v })}>
                     <SelectTrigger><SelectValue placeholder="—" /></SelectTrigger>
