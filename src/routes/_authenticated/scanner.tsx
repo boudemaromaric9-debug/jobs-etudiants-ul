@@ -10,8 +10,10 @@ export const Route = createFileRoute("/_authenticated/scanner")({
       .from("user_roles")
       .select("role")
       .eq("user_id", u.user.id)
-      .in("role", ["admin", "sub_admin"]);
-    if (!data || data.length === 0) throw redirect({ to: "/dashboard" });
+      .single();
+    if (!data || (data.role !== "admin" && data.role !== "sub_admin")) {
+      throw redirect({ to: "/dashboard" });
+    }
   },
   component: () => <Outlet />,
 });

@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Html5Qrcode, Html5QrcodeSupportedFormats } from "html5-qrcode";
+import QrScanner from "qr-scanner";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -30,15 +30,14 @@ function parsePayload(raw: string): string | null {
     const id = txt.slice(QR_PREFIX.length).trim();
     return /^[0-9a-f-]{36}$/i.test(id) ? id : null;
   }
-  // Allow raw UUID as fallback
   return /^[0-9a-f-]{36}$/i.test(txt) ? txt : null;
 }
 
 function ScannerPage() {
   const { activityId } = Route.useParams();
   const qc = useQueryClient();
-  const containerId = "qr-reader";
-  const scannerRef = useRef<Html5Qrcode | null>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const scannerRef = useRef<QrScanner | null>(null);
   const [running, setRunning] = useState(false);
   const [mode, setMode] = useState<"check_in" | "check_out">("check_in");
   const [lastScan, setLastScan] = useState<ScanState>({ kind: "idle", message: "En attente d'un QR code…" });
@@ -57,7 +56,6 @@ function ScannerPage() {
     },
   });
 
-  // Registrations for this activity with profile names
   const regs = useQuery({
     queryKey: ["scanner", "regs", activityId],
     refetchInterval: 5000,
@@ -109,14 +107,6 @@ function ScannerPage() {
     if (mode === "check_in" && reg.check_in) {
       setLastScan({ kind: "already", message: "Présence déjà enregistrée", name: displayName, at: reg.check_in });
       toast.warning(`⚠️ ${displayName} : déjà pointé`);
-      await supabase.from("qr_scan_logs").insert({
-        activity_id: activityId,
-        scanned_by: (await supabase.auth.getUser()).data.user!.id,
-        student_id: studentId,
-        scan_kind: mode,
-        scan_result: "already_done",
-        raw_payload: raw,
-      });
       return;
     }
 
@@ -132,7 +122,6 @@ function ScannerPage() {
       return;
     }
 
-    // Apply update
     const inT = reg.check_in ? new Date(reg.check_in).getTime() : null;
     const outT = new Date(now).getTime();
     const patch = mode === "check_in"
@@ -165,22 +154,15 @@ function ScannerPage() {
   }
 
   async function start() {
-    if (running) return;
+    if (running || !videoRef.current) return;
     try {
-      const html5 = new Html5Qrcode(containerId, {
-        formatsToSupport: [Html5QrcodeSupportedFormats.QR_CODE],
-        verbose: false,
-      });
-      scannerRef.current = html5;
-      await html5.start(
-        { facingMode: "environment" },
-        { fps: 10, qrbox: { width: 240, height: 240 } },
-        async (decoded) => {
-          // Debounce identical scans
+      const scanner = new QrScanner(
+        videoRef.current,
+        async (result) => {
+          const decoded = result.data;
           if (processingRef.current === decoded) return;
           processingRef.current = decoded;
           setTimeout(() => { if (processingRef.current === decoded) processingRef.current = null; }, 2500);
-
           const id = parsePayload(decoded);
           if (!id) {
             setLastScan({ kind: "rejected", message: "QR code invalide", at: new Date().toISOString() });
@@ -189,8 +171,14 @@ function ScannerPage() {
           }
           await handleScan(id, decoded);
         },
-        () => { /* ignore decode errors */ },
+        {
+          preferredCamera: "environment",
+          highlightScanRegion: true,
+          highlightCodeOutline: true,
+        }
       );
+      scannerRef.current = scanner;
+      await scanner.start();
       setRunning(true);
     } catch (e: any) {
       toast.error(e?.message ?? "Impossible d'accéder à la caméra. Vérifiez les autorisations.");
@@ -200,14 +188,14 @@ function ScannerPage() {
   async function stop() {
     const s = scannerRef.current;
     if (!s) return;
-    try { await s.stop(); await s.clear(); } catch { /* ignore */ }
+    s.stop();
+    s.destroy();
     scannerRef.current = null;
     setRunning(false);
   }
 
   useEffect(() => {
     return () => { stop(); };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const counters = useMemo(() => {
@@ -235,7 +223,9 @@ function ScannerPage() {
   return (
     <div className="container mx-auto max-w-5xl space-y-4 p-4 md:p-6">
       <div className="flex items-center gap-3">
-        <Button asChild variant="ghost" size="sm"><Link to="/scanner"><ArrowLeft className="mr-1 h-4 w-4" />Activités</Link></Button>
+        <Button asChild variant="ghost" size="sm">
+          <Link to="/scanner"><ArrowLeft className="mr-1 h-4 w-4" />Activités</Link>
+        </Button>
       </div>
 
       <header className="space-y-1">
@@ -248,15 +238,23 @@ function ScannerPage() {
           <CardHeader className="pb-3">
             <div className="flex flex-wrap items-center gap-2">
               <CardTitle className="text-base flex-1">Caméra</CardTitle>
-              <Button size="sm" variant={mode === "check_in" ? "default" : "outline"} onClick={() => setMode("check_in")}><LogIn className="mr-1 h-4 w-4" />Check-in</Button>
-              <Button size="sm" variant={mode === "check_out" ? "default" : "outline"} onClick={() => setMode("check_out")}><LogOut className="mr-1 h-4 w-4" />Check-out</Button>
+              <Button size="sm" variant={mode === "check_in" ? "default" : "outline"} onClick={() => setMode("check_in")}>
+                <LogIn className="mr-1 h-4 w-4" />Check-in
+              </Button>
+              <Button size="sm" variant={mode === "check_out" ? "default" : "outline"} onClick={() => setMode("check_out")}>
+                <LogOut className="mr-1 h-4 w-4" />Check-out
+              </Button>
             </div>
           </CardHeader>
           <CardContent className="space-y-3">
-            <div id={containerId} className="aspect-square w-full overflow-hidden rounded-lg bg-black/90" />
+            <div className="aspect-square w-full overflow-hidden rounded-lg bg-black/90">
+              <video ref={videoRef} className="h-full w-full object-cover" />
+            </div>
             <div className="flex gap-2">
               {!running ? (
-                <Button onClick={start} className="flex-1"><Camera className="mr-2 h-4 w-4" />Démarrer le scanner</Button>
+                <Button onClick={start} className="flex-1">
+                  <Camera className="mr-2 h-4 w-4" />Démarrer le scanner
+                </Button>
               ) : (
                 <Button onClick={stop} variant="destructive" className="flex-1">Arrêter</Button>
               )}
@@ -274,7 +272,9 @@ function ScannerPage() {
         <Card>
           <CardHeader className="pb-3 flex-row items-center justify-between space-y-0">
             <CardTitle className="text-base">Inscrits</CardTitle>
-            <Button size="icon" variant="ghost" onClick={() => regs.refetch()}><RefreshCw className="h-4 w-4" /></Button>
+            <Button size="icon" variant="ghost" onClick={() => regs.refetch()}>
+              <RefreshCw className="h-4 w-4" />
+            </Button>
           </CardHeader>
           <CardContent className="space-y-3">
             <div className="grid grid-cols-3 gap-2 text-center text-xs">
