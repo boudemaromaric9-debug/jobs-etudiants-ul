@@ -103,61 +103,110 @@ function AdminActivites() {
         description="Créez et gérez les missions d'entretien du campus."
         action={
           <Dialog open={open} onOpenChange={setOpen}>
-            <DialogTrigger asChild><Button onClick={openCreate}><Plus className="mr-1 h-4 w-4" /> Nouvelle activité</Button></DialogTrigger>
-            <DialogContent className="max-w-2xl">
-              <DialogHeader><DialogTitle>{editing ? "Modifier l'activité" : "Nouvelle activité"}</DialogTitle></DialogHeader>
-              <form onSubmit={save} className="grid gap-4 sm:grid-cols-2">
-                <div className="sm:col-span-2"><Label>Titre</Label><Input value={form.titre} onChange={(e) => setForm({ ...form, titre: e.target.value })} required maxLength={150} /></div>
-                <div><Label>Type</Label>
-                  <Select value={form.type} onValueChange={(v) => setForm({ ...form, type: v })}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>{Object.entries(ACTIVITY_TYPES).map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}</SelectContent>
-                  </Select>
+            <DialogTrigger asChild>
+              <Button onClick={openCreate}><Plus className="mr-1 h-4 w-4" /> Nouvelle activité</Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-2xl w-full flex flex-col max-h-[90vh] p-0">
+              <DialogHeader className="px-6 pt-6 pb-2 shrink-0">
+                <DialogTitle>{editing ? "Modifier l'activité" : "Nouvelle activité"}</DialogTitle>
+              </DialogHeader>
+              <form onSubmit={save} className="flex flex-col flex-1 min-h-0">
+                <div className="flex-1 overflow-y-auto px-6 py-2">
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div className="sm:col-span-2">
+                      <Label>Titre</Label>
+                      <Input value={form.titre} onChange={(e) => setForm({ ...form, titre: e.target.value })} required maxLength={150} />
+                    </div>
+                    <div>
+                      <Label>Type</Label>
+                      <Select value={form.type} onValueChange={(v) => setForm({ ...form, type: v })}>
+                        <SelectTrigger><SelectValue /></SelectTrigger>
+                        <SelectContent>{Object.entries(ACTIVITY_TYPES).map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}</SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label>Statut</Label>
+                      <Select value={form.status} onValueChange={(v) => setForm({ ...form, status: v })}>
+                        <SelectTrigger><SelectValue /></SelectTrigger>
+                        <SelectContent>{Object.entries(ACTIVITY_STATUS_LABEL).map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}</SelectContent>
+                      </Select>
+                    </div>
+                    <div className="sm:col-span-2">
+                      <Label>Description</Label>
+                      <Textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} maxLength={1000} />
+                    </div>
+                    <div>
+                      <Label>Date</Label>
+                      <Input type="date" value={form.date_activite} onChange={(e) => setForm({ ...form, date_activite: e.target.value })} required />
+                    </div>
+                    <div>
+                      <Label>Lieu</Label>
+                      <Input value={form.lieu} onChange={(e) => setForm({ ...form, lieu: e.target.value })} required maxLength={150} />
+                    </div>
+                    <div>
+                      <Label>Heure début</Label>
+                      <Input type="time" value={form.heure_debut} onChange={(e) => setForm({ ...form, heure_debut: e.target.value })} required />
+                    </div>
+                    <div>
+                      <Label>Heure fin</Label>
+                      <Input type="time" value={form.heure_fin} onChange={(e) => setForm({ ...form, heure_fin: e.target.value })} required />
+                    </div>
+                    <div>
+                      <Label>Participants max</Label>
+                      <Input type="number" min="1" max="500" value={form.max_participants} onChange={(e) => setForm({ ...form, max_participants: e.target.value })} required />
+                    </div>
+                    <div>
+                      <Label>Rémunération (FCFA)</Label>
+                      <Input type="number" min="0" value={form.remuneration} onChange={(e) => setForm({ ...form, remuneration: e.target.value })} required />
+                    </div>
+                    <div>
+                      <Label>Part étudiant (%)</Label>
+                      <Input type="number" min="0" max="100" step="1" value={Math.round((form.split_etudiant ?? 0.75) * 100)} onChange={(e) => setForm({ ...form, split_etudiant: Number(e.target.value) / 100 })} required />
+                      <p className="mt-1 text-[10px] text-muted-foreground">Le reste ({100 - Math.round((form.split_etudiant ?? 0.75) * 100)}%) revient à l'institution.</p>
+                    </div>
+                    <div>
+                      <Label>Type de rémunération</Label>
+                      <Select value={form.type_remuneration} onValueChange={(v) => setForm({ ...form, type_remuneration: v })}>
+                        <SelectTrigger><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="fixe">Montant fixe par présent</SelectItem>
+                          <SelectItem value="horaire">Taux horaire</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    {form.type_remuneration === "fixe" ? (
+                      <div>
+                        <Label>Montant par étudiant (FCFA)</Label>
+                        <Input type="number" min="0" value={form.montant_par_etudiant} onChange={(e) => setForm({ ...form, montant_par_etudiant: e.target.value })} />
+                      </div>
+                    ) : (
+                      <div>
+                        <Label>Montant par heure (FCFA)</Label>
+                        <Input type="number" min="0" value={form.montant_par_heure} onChange={(e) => setForm({ ...form, montant_par_heure: e.target.value })} />
+                      </div>
+                    )}
+                    <div className="sm:col-span-2 rounded-md border border-dashed p-3 text-xs text-muted-foreground">
+                      💡 Quand vous passerez le statut à <b>Terminée</b>, chaque étudiant marqué présent recevra automatiquement sa rémunération et une notification.
+                    </div>
+                    <div className="sm:col-span-2">
+                      <Label>Responsable d'équipe (étudiant ou admin)</Label>
+                      <Select value={form.responsable_id || "none"} onValueChange={(v) => setForm({ ...form, responsable_id: v === "none" ? "" : v })}>
+                        <SelectTrigger><SelectValue placeholder="—" /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">— Aucun —</SelectItem>
+                          {staffQ.data?.map((s: any) => <SelectItem key={s.id} value={s.id}>{s.prenoms} {s.nom} · {s.faculte ?? ""}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="sm:col-span-2">
+                      <Label>Nom du responsable terrain (texte libre, optionnel)</Label>
+                      <Input value={form.responsable} onChange={(e) => setForm({ ...form, responsable: e.target.value })} maxLength={150} />
+                    </div>
+                  </div>
                 </div>
-                <div><Label>Statut</Label>
-                  <Select value={form.status} onValueChange={(v) => setForm({ ...form, status: v })}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>{Object.entries(ACTIVITY_STATUS_LABEL).map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}</SelectContent>
-                  </Select>
-                </div>
-                <div className="sm:col-span-2"><Label>Description</Label><Textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} maxLength={1000} /></div>
-                <div><Label>Date</Label><Input type="date" value={form.date_activite} onChange={(e) => setForm({ ...form, date_activite: e.target.value })} required /></div>
-                <div><Label>Lieu</Label><Input value={form.lieu} onChange={(e) => setForm({ ...form, lieu: e.target.value })} required maxLength={150} /></div>
-                <div><Label>Heure début</Label><Input type="time" value={form.heure_debut} onChange={(e) => setForm({ ...form, heure_debut: e.target.value })} required /></div>
-                <div><Label>Heure fin</Label><Input type="time" value={form.heure_fin} onChange={(e) => setForm({ ...form, heure_fin: e.target.value })} required /></div>
-                <div><Label>Participants max</Label><Input type="number" min="1" max="500" value={form.max_participants} onChange={(e) => setForm({ ...form, max_participants: e.target.value })} required /></div>
-                <div><Label>Rémunération (FCFA)</Label><Input type="number" min="0" value={form.remuneration} onChange={(e) => setForm({ ...form, remuneration: e.target.value })} required /></div>
-                <div><Label>Part étudiant (%)</Label><Input type="number" min="0" max="100" step="1" value={Math.round((form.split_etudiant ?? 0.75) * 100)} onChange={(e) => setForm({ ...form, split_etudiant: Number(e.target.value) / 100 })} required />
-                  <p className="mt-1 text-[10px] text-muted-foreground">Le reste ({100 - Math.round((form.split_etudiant ?? 0.75) * 100)}%) revient à l'institution.</p>
-                </div>
-                <div><Label>Type de rémunération</Label>
-                  <Select value={form.type_remuneration} onValueChange={(v) => setForm({ ...form, type_remuneration: v })}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="fixe">Montant fixe par présent</SelectItem>
-                      <SelectItem value="horaire">Taux horaire</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                {form.type_remuneration === "fixe" ? (
-                  <div><Label>Montant par étudiant (FCFA)</Label><Input type="number" min="0" value={form.montant_par_etudiant} onChange={(e) => setForm({ ...form, montant_par_etudiant: e.target.value })} /></div>
-                ) : (
-                  <div><Label>Montant par heure (FCFA)</Label><Input type="number" min="0" value={form.montant_par_heure} onChange={(e) => setForm({ ...form, montant_par_heure: e.target.value })} /></div>
-                )}
-                <div className="sm:col-span-2 rounded-md border border-dashed p-3 text-xs text-muted-foreground">
-                  💡 Quand vous passerez le statut à <b>Terminée</b>, chaque étudiant marqué présent recevra automatiquement sa rémunération et une notification.
-                </div>
-                <div className="sm:col-span-2"><Label>Responsable d'équipe (étudiant ou admin)</Label>
-                  <Select value={form.responsable_id || "none"} onValueChange={(v) => setForm({ ...form, responsable_id: v === "none" ? "" : v })}>
-                    <SelectTrigger><SelectValue placeholder="—" /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">— Aucun —</SelectItem>
-                      {staffQ.data?.map((s: any) => <SelectItem key={s.id} value={s.id}>{s.prenoms} {s.nom} · {s.faculte ?? ""}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="sm:col-span-2"><Label>Nom du responsable terrain (texte libre, optionnel)</Label><Input value={form.responsable} onChange={(e) => setForm({ ...form, responsable: e.target.value })} maxLength={150} /></div>
-                <DialogFooter className="sm:col-span-2"><Button type="submit">{editing ? "Mettre à jour" : "Créer"}</Button></DialogFooter>
+                <DialogFooter className="px-6 py-4 border-t shrink-0">
+                  <Button type="submit">{editing ? "Mettre à jour" : "Créer"}</Button>
+                </DialogFooter>
               </form>
             </DialogContent>
           </Dialog>
@@ -184,21 +233,36 @@ function AdminActivites() {
                       <td className="px-4 py-3">
                         <div className="font-medium">{a.titre}</div>
                         <div className="text-xs text-muted-foreground">{ACTIVITY_TYPES[a.type] ?? a.type} · {a.lieu}</div>
-                        {((a as any).responsable_user || a.responsable) && <div className="text-[11px] mt-1 inline-block rounded bg-accent/15 px-1.5 py-0.5">Responsable&nbsp;: {(a as any).responsable_user ? `${(a as any).responsable_user.prenoms} ${(a as any).responsable_user.nom}` : a.responsable}</div>}
+                        {((a as any).responsable_user || a.responsable) && (
+                          <div className="text-[11px] mt-1 inline-block rounded bg-accent/15 px-1.5 py-0.5">
+                            Responsable : {(a as any).responsable_user ? `${(a as any).responsable_user.prenoms} ${(a as any).responsable_user.nom}` : a.responsable}
+                          </div>
+                        )}
                       </td>
-                      <td className="px-4 py-3 text-muted-foreground">{formatDate(a.date_activite)}<br /><span className="text-xs">{formatTime(a.heure_debut)}–{formatTime(a.heure_fin)}</span></td>
+                      <td className="px-4 py-3 text-muted-foreground">
+                        {formatDate(a.date_activite)}<br />
+                        <span className="text-xs">{formatTime(a.heure_debut)}–{formatTime(a.heure_fin)}</span>
+                      </td>
                       <td className="px-4 py-3">{a.registrations?.[0]?.count ?? 0} / {a.max_participants}</td>
                       <td className="px-4 py-3">{fcfa(a.remuneration)}</td>
-                      <td className="px-4 py-3"><Badge variant={a.status === "open" ? "default" : "secondary"}>{ACTIVITY_STATUS_LABEL[a.status]}</Badge></td>
+                      <td className="px-4 py-3">
+                        <Badge variant={a.status === "open" ? "default" : "secondary"}>{ACTIVITY_STATUS_LABEL[a.status]}</Badge>
+                      </td>
                       <td className="px-4 py-3 text-right">
                         <div className="flex justify-end gap-1">
-                          <Button size="sm" variant="outline" onClick={() => setPresencesAct(a)}><Users className="mr-1 h-4 w-4" />Présences</Button>
-                          <Button size="sm" variant="ghost" onClick={() => openEdit(a)}><Pencil className="h-4 w-4" /></Button>
+                          <Button size="sm" variant="outline" onClick={() => setPresencesAct(a)}>
+                            <Users className="mr-1 h-4 w-4" />Présences
+                          </Button>
+                          <Button size="sm" variant="ghost" onClick={() => openEdit(a)}>
+                            <Pencil className="h-4 w-4" />
+                          </Button>
                         </div>
                       </td>
                     </tr>
                   ))}
-                  {q.data?.length === 0 && <tr><td colSpan={6} className="px-4 py-10 text-center text-muted-foreground">Aucune activité.</td></tr>}
+                  {q.data?.length === 0 && (
+                    <tr><td colSpan={6} className="px-4 py-10 text-center text-muted-foreground">Aucune activité.</td></tr>
+                  )}
                 </tbody>
               </table>
             </div>
@@ -216,17 +280,11 @@ function PresencesDialog({ activity, onClose }: { activity: any; onClose: () => 
   const q = useQuery({
     queryKey: ["regs-for-activity", activity.id],
     queryFn: async () => {
-      const { data: regs, error } = await supabase
-        .from("registrations")
-        .select("*")
-        .eq("activity_id", activity.id);
+      const { data: regs, error } = await supabase.from("registrations").select("*").eq("activity_id", activity.id);
       if (error) { toast.error(error.message); return []; }
       const ids = Array.from(new Set((regs ?? []).map((r: any) => r.user_id)));
       if (ids.length === 0) return [];
-      const { data: profs } = await supabase
-        .from("profiles")
-        .select("id, nom, prenoms, faculte")
-        .in("id", ids);
+      const { data: profs } = await supabase.from("profiles").select("id, nom, prenoms, faculte").in("id", ids);
       const byId = new Map((profs ?? []).map((p: any) => [p.id, p]));
       return (regs ?? []).map((r: any) => ({ ...r, profiles: byId.get(r.user_id) }));
     },
@@ -251,16 +309,13 @@ function PresencesDialog({ activity, onClose }: { activity: any; onClose: () => 
   }
   async function markNoShow(id: string) { await update(id, { status: "no_show" }); }
   async function rate(id: string, field: string, val: number) {
-    const patch: any = { [field]: val };
-    await update(id, patch);
-    // Update profile score average
+    await update(id, { [field]: val });
     const reg = (q.data ?? []).find((r) => r.id === id);
     if (reg) {
       const newReg = { ...reg, [field]: val };
       const scores = [newReg.score_ponctualite, newReg.score_discipline, newReg.score_qualite].filter((x) => x != null);
       if (scores.length === 3) {
-        const avg = scores.reduce((a, b) => a + b, 0) / 3;
-        await supabase.rpc; // noop
+        const avg = scores.reduce((a: number, b: number) => a + b, 0) / 3;
         await supabase.from("profiles").update({ score: avg }).eq("id", reg.user_id);
       }
     }
@@ -268,9 +323,11 @@ function PresencesDialog({ activity, onClose }: { activity: any; onClose: () => 
 
   return (
     <Dialog open onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="max-w-4xl">
-        <DialogHeader><DialogTitle>Présences — {activity.titre}</DialogTitle></DialogHeader>
-        <div className="max-h-[70vh] overflow-y-auto">
+      <DialogContent className="max-w-4xl w-full flex flex-col max-h-[90vh] p-0">
+        <DialogHeader className="px-6 pt-6 pb-2 shrink-0">
+          <DialogTitle>Présences — {activity.titre}</DialogTitle>
+        </DialogHeader>
+        <div className="flex-1 overflow-y-auto px-6 pb-6">
           <table className="w-full text-sm">
             <thead className="border-b text-left text-xs uppercase text-muted-foreground">
               <tr>
@@ -285,7 +342,10 @@ function PresencesDialog({ activity, onClose }: { activity: any; onClose: () => 
             <tbody>
               {q.data?.map((r: any) => (
                 <tr key={r.id} className="border-b last:border-0">
-                  <td className="px-3 py-2"><div className="font-medium">{r.profiles?.nom} {r.profiles?.prenoms}</div><div className="text-xs text-muted-foreground">{r.profiles?.faculte}</div></td>
+                  <td className="px-3 py-2">
+                    <div className="font-medium">{r.profiles?.nom} {r.profiles?.prenoms}</div>
+                    <div className="text-xs text-muted-foreground">{r.profiles?.faculte}</div>
+                  </td>
                   <td className="px-3 py-2 text-xs">{r.check_in ? new Date(r.check_in).toLocaleTimeString("fr-FR") : "—"}</td>
                   <td className="px-3 py-2 text-xs">{r.check_out ? new Date(r.check_out).toLocaleTimeString("fr-FR") : "—"}</td>
                   <td className="px-3 py-2">{Number(r.heures_effectuees).toFixed(1)}</td>
@@ -301,14 +361,24 @@ function PresencesDialog({ activity, onClose }: { activity: any; onClose: () => 
                   </td>
                   <td className="px-3 py-2">
                     <div className="flex gap-1">
-                      {!r.check_in && <Button size="sm" variant="outline" onClick={() => checkIn(r.id)}><ClipboardCheck className="mr-1 h-3.5 w-3.5" />Arrivée</Button>}
-                      {r.check_in && !r.check_out && <Button size="sm" variant="outline" onClick={() => checkOut(r)}>Départ</Button>}
-                      {r.status !== "no_show" && r.status !== "attended" && <Button size="sm" variant="ghost" onClick={() => markNoShow(r.id)}>Absent</Button>}
+                      {!r.check_in && (
+                        <Button size="sm" variant="outline" onClick={() => checkIn(r.id)}>
+                          <ClipboardCheck className="mr-1 h-3.5 w-3.5" />Arrivée
+                        </Button>
+                      )}
+                      {r.check_in && !r.check_out && (
+                        <Button size="sm" variant="outline" onClick={() => checkOut(r)}>Départ</Button>
+                      )}
+                      {r.status !== "no_show" && r.status !== "attended" && (
+                        <Button size="sm" variant="ghost" onClick={() => markNoShow(r.id)}>Absent</Button>
+                      )}
                     </div>
                   </td>
                 </tr>
               ))}
-              {q.data?.length === 0 && <tr><td colSpan={6} className="px-3 py-10 text-center text-muted-foreground">Aucun inscrit.</td></tr>}
+              {q.data?.length === 0 && (
+                <tr><td colSpan={6} className="px-3 py-10 text-center text-muted-foreground">Aucun inscrit.</td></tr>
+              )}
             </tbody>
           </table>
         </div>
