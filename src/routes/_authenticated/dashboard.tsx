@@ -1,5 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { PageContent, PageHeader, StatCard } from "@/components/page-shell";
@@ -10,12 +11,24 @@ import { Clock, Wallet, Calendar, Trophy, ArrowRight, Megaphone } from "lucide-r
 import { ACTIVITY_TYPES, fcfa, formatDate, formatTime } from "@/lib/format";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
-  head: () => ({ meta: [{ title: "Tableau de bord — JOBS CAMPUS UL" }] }),
+  head: () => ({ meta: [{ title: "Tableau de bord — JOBS ÉTUDIANTS UL" }] }),
   component: Dashboard,
 });
 
 function Dashboard() {
   const { user } = useAuth();
+  const qc = useQueryClient();
+
+  useEffect(() => {
+    if (!user) return;
+    const ch = supabase
+      .channel(`profile-live-${user.id}`)
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "profiles", filter: `id=eq.${user.id}` }, () => {
+        qc.invalidateQueries({ queryKey: ["profile", user.id] });
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(ch); };
+  }, [user, qc]);
 
   const profileQ = useQuery({
     queryKey: ["profile", user?.id],

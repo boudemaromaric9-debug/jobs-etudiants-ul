@@ -26,6 +26,8 @@ const empty = {
   date_activite: "", heure_debut: "08:00", heure_fin: "12:00",
   lieu: "", max_participants: 20, remuneration: 5000, responsable: "", responsable_id: "",
   split_etudiant: 0.75,
+  type_remuneration: "fixe" as "fixe" | "horaire",
+  montant_par_etudiant: 5000, montant_par_heure: 0,
   status: "draft" as "draft" | "open" | "closed" | "cancelled" | "completed",
 };
 
@@ -61,14 +63,25 @@ function AdminActivites() {
       date_activite: a.date_activite, heure_debut: a.heure_debut, heure_fin: a.heure_fin,
       lieu: a.lieu, max_participants: a.max_participants, remuneration: a.remuneration,
       responsable: a.responsable || "", responsable_id: a.responsable_id || "",
-      split_etudiant: a.split_etudiant ?? 0.75, status: a.status,
+      split_etudiant: a.split_etudiant ?? 0.75,
+      type_remuneration: a.type_remuneration ?? "fixe",
+      montant_par_etudiant: a.montant_par_etudiant ?? 0,
+      montant_par_heure: a.montant_par_heure ?? 0,
+      status: a.status,
     });
     setOpen(true);
   }
 
   async function save(e: React.FormEvent) {
     e.preventDefault();
-    const payload: any = { ...form, max_participants: Number(form.max_participants), remuneration: Number(form.remuneration), split_etudiant: Math.min(1, Math.max(0, Number(form.split_etudiant))) };
+    const payload: any = {
+      ...form,
+      max_participants: Number(form.max_participants),
+      remuneration: Number(form.remuneration),
+      split_etudiant: Math.min(1, Math.max(0, Number(form.split_etudiant))),
+      montant_par_etudiant: Number(form.montant_par_etudiant) || 0,
+      montant_par_heure: Number(form.montant_par_heure) || 0,
+    };
     if (!payload.responsable_id) payload.responsable_id = null;
     if (editing) {
       const { error } = await supabase.from("activities").update(payload).eq("id", editing.id);
@@ -116,6 +129,23 @@ function AdminActivites() {
                 <div><Label>Rémunération (FCFA)</Label><Input type="number" min="0" value={form.remuneration} onChange={(e) => setForm({ ...form, remuneration: e.target.value })} required /></div>
                 <div><Label>Part étudiant (%)</Label><Input type="number" min="0" max="100" step="1" value={Math.round((form.split_etudiant ?? 0.75) * 100)} onChange={(e) => setForm({ ...form, split_etudiant: Number(e.target.value) / 100 })} required />
                   <p className="mt-1 text-[10px] text-muted-foreground">Le reste ({100 - Math.round((form.split_etudiant ?? 0.75) * 100)}%) revient à l'institution.</p>
+                </div>
+                <div><Label>Type de rémunération</Label>
+                  <Select value={form.type_remuneration} onValueChange={(v) => setForm({ ...form, type_remuneration: v })}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="fixe">Montant fixe par présent</SelectItem>
+                      <SelectItem value="horaire">Taux horaire</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                {form.type_remuneration === "fixe" ? (
+                  <div><Label>Montant par étudiant (FCFA)</Label><Input type="number" min="0" value={form.montant_par_etudiant} onChange={(e) => setForm({ ...form, montant_par_etudiant: e.target.value })} /></div>
+                ) : (
+                  <div><Label>Montant par heure (FCFA)</Label><Input type="number" min="0" value={form.montant_par_heure} onChange={(e) => setForm({ ...form, montant_par_heure: e.target.value })} /></div>
+                )}
+                <div className="sm:col-span-2 rounded-md border border-dashed p-3 text-xs text-muted-foreground">
+                  💡 Quand vous passerez le statut à <b>Terminée</b>, chaque étudiant marqué présent recevra automatiquement sa rémunération et une notification.
                 </div>
                 <div className="sm:col-span-2"><Label>Responsable d'équipe (étudiant ou admin)</Label>
                   <Select value={form.responsable_id || "none"} onValueChange={(v) => setForm({ ...form, responsable_id: v === "none" ? "" : v })}>
