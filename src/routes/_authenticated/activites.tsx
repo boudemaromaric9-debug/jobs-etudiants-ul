@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ACTIVITY_TYPES, fcfa, formatDate, formatTime } from "@/lib/format";
-import { Calendar, MapPin, Users, ClipboardCheck, X } from "lucide-react";
+import { Calendar, MapPin, Users, ClipboardCheck, X, Mail, Check } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/activites")({
   head: () => ({ meta: [{ title: "Activités — JOBS ÉTUDIANTS" }] }),
@@ -45,7 +45,29 @@ function ActivitesPage() {
     },
   });
 
+  const invitationsQ = useQuery({
+    queryKey: ["my-invitations", user?.id],
+    enabled: !!user,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("invitations_activite")
+        .select("*, activities(titre, date_activite, heure_debut, heure_fin, lieu, type)")
+        .eq("user_id", user!.id)
+        .eq("status", "pending")
+        .order("created_at", { ascending: false });
+      return data ?? [];
+    },
+  });
+
   const myRegByAct = new Map((myRegsQ.data ?? []).map((r) => [r.activity_id, r]));
+
+  async function respondInvitation(id: string, status: "accepted" | "refused") {
+    const { error } = await supabase.from("invitations_activite").update({ status }).eq("id", id);
+    if (error) { toast.error(error.message); return; }
+    toast.success(status === "accepted" ? "Invitation acceptée !" : "Invitation refusée.");
+    qc.invalidateQueries({ queryKey: ["my-invitations"] });
+    qc.invalidateQueries({ queryKey: ["my-regs"] });
+  }
 
   async function register(activityId: string, remuneration: number) {
     const { error } = await supabase.from("registrations").insert({
@@ -64,6 +86,7 @@ function ActivitesPage() {
     qc.invalidateQueries({ queryKey: ["my-regs"] });
   }
 
+
   const filtered = (activitiesQ.data ?? []).filter((a) => {
     const matchSearch = !search || a.titre.toLowerCase().includes(search.toLowerCase()) || a.lieu.toLowerCase().includes(search.toLowerCase());
     const matchType = typeFilter === "all" || a.type === typeFilter;
@@ -74,7 +97,30 @@ function ActivitesPage() {
     <>
       <PageHeader title="Activités" description="Inscrivez-vous aux missions ouvertes du campus." />
       <PageContent>
+        {(invitationsQ.data ?? []).length > 0 && (
+          <div className="mb-6 rounded-2xl border border-accent/40 bg-accent/5 p-4">
+            <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-accent">
+              <Mail className="h-4 w-4" /> Invitations en attente ({invitationsQ.data!.length})
+            </div>
+            <div className="grid gap-3 md:grid-cols-2">
+              {invitationsQ.data!.map((inv: any) => (
+                <div key={inv.id} className="rounded-xl border border-border bg-card p-3">
+                  <div className="mb-1 text-sm font-semibold">{inv.activities?.titre ?? "Activité"}</div>
+                  <div className="text-xs text-muted-foreground">
+                    {inv.activities && (<>{formatDate(inv.activities.date_activite)} · {formatTime(inv.activities.heure_debut)}–{formatTime(inv.activities.heure_fin)} · {inv.activities.lieu}</>)}
+                  </div>
+                  {inv.message && <div className="mt-2 rounded-md bg-muted/40 p-2 text-xs italic text-muted-foreground">« {inv.message} »</div>}
+                  <div className="mt-3 flex gap-2">
+                    <Button size="sm" onClick={() => respondInvitation(inv.id, "accepted")}><Check className="mr-1 h-3.5 w-3.5" /> Accepter</Button>
+                    <Button size="sm" variant="outline" onClick={() => respondInvitation(inv.id, "refused")}><X className="mr-1 h-3.5 w-3.5" /> Refuser</Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
         <div className="mb-5 flex flex-wrap gap-3">
+
           <Input placeholder="Rechercher un titre, un lieu..." value={search} onChange={(e) => setSearch(e.target.value)} className="max-w-sm" />
           <Select value={typeFilter} onValueChange={setTypeFilter}>
             <SelectTrigger className="w-[220px]"><SelectValue placeholder="Type" /></SelectTrigger>
