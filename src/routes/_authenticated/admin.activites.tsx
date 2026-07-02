@@ -21,15 +21,25 @@ export const Route = createFileRoute("/_authenticated/admin/activites")({
   component: AdminActivites,
 });
 
+// ✅ split_etudiant stocké en FLOAT (0.75) en base de données
+// Le formulaire affiche en % (75) mais stocke toujours en float
 const empty = {
   titre: "", description: "", type: "nettoyage_amphi",
   date_activite: "", heure_debut: "08:00", heure_fin: "12:00",
   lieu: "", max_participants: 20, remuneration: 5000, responsable: "", responsable_id: "",
-  split_etudiant: 0.75,
+  split_etudiant: 0.75, // ✅ float en base : 0.75 = 75%
   type_remuneration: "fixe" as "fixe" | "horaire",
   montant_par_etudiant: 5000, montant_par_heure: 0,
   status: "draft" as "draft" | "open" | "closed" | "cancelled" | "completed",
 };
+
+// ✅ Helper : normalise split_etudiant en float quoi qu'il arrive en base
+// (si la base contient 75 ou 0.75, on retourne toujours 0.75)
+function toFloat(val: any, fallback = 0.75): number {
+  const n = Number(val);
+  if (isNaN(n)) return fallback;
+  return n > 1 ? n / 100 : n; // 75 → 0.75 | 0.75 → 0.75
+}
 
 function AdminActivites() {
   const { user } = useAuth();
@@ -42,7 +52,10 @@ function AdminActivites() {
   const q = useQuery({
     queryKey: ["admin-activities"],
     queryFn: async () => {
-      const { data } = await supabase.from("activities").select("*, registrations(count), responsable_user:profiles!activities_responsable_id_fkey(nom,prenoms)").order("date_activite", { ascending: false });
+      const { data } = await supabase
+        .from("activities")
+        .select("*, registrations(count), responsable_user:profiles!activities_responsable_id_fkey(nom,prenoms)")
+        .order("date_activite", { ascending: false });
       return data ?? [];
     },
   });
@@ -56,6 +69,7 @@ function AdminActivites() {
   });
 
   function openCreate() { setEditing(null); setForm(empty); setOpen(true); }
+
   function openEdit(a: any) {
     setEditing(a);
     setForm({
@@ -63,7 +77,7 @@ function AdminActivites() {
       date_activite: a.date_activite, heure_debut: a.heure_debut, heure_fin: a.heure_fin,
       lieu: a.lieu, max_participants: a.max_participants, remuneration: a.remuneration,
       responsable: a.responsable || "", responsable_id: a.responsable_id || "",
-      split_etudiant: a.split_etudiant ?? 0.75,
+      split_etudiant: toFloat(a.split_etudiant), // ✅ toujours normalisé en float
       type_remuneration: a.type_remuneration ?? "fixe",
       montant_par_etudiant: a.montant_par_etudiant ?? 0,
       montant_par_heure: a.montant_par_heure ?? 0,
@@ -78,7 +92,7 @@ function AdminActivites() {
       ...form,
       max_participants: Number(form.max_participants),
       remuneration: Number(form.remuneration),
-      split_etudiant: Math.min(1, Math.max(0, Number(form.split_etudiant))),
+      split_etudiant: toFloat(form.split_etudiant), // ✅ on s'assure de toujours stocker un float
       montant_par_etudiant: Number(form.montant_par_etudiant) || 0,
       montant_par_heure: Number(form.montant_par_heure) || 0,
     };
@@ -95,6 +109,9 @@ function AdminActivites() {
     setOpen(false);
     qc.invalidateQueries({ queryKey: ["admin-activities"] });
   }
+
+  // ✅ Valeur affichée en % dans le formulaire (0.75 → 75)
+  const splitPctDisplay = Math.round(toFloat(form.split_etudiant) * 100);
 
   return (
     <>
@@ -161,8 +178,19 @@ function AdminActivites() {
                     </div>
                     <div>
                       <Label>Part étudiant (%)</Label>
-                      <Input type="number" min="0" max="100" step="1" value={Math.round((form.split_etudiant ?? 0.75) * 100)} onChange={(e) => setForm({ ...form, split_etudiant: Number(e.target.value) / 100 })} required />
-                      <p className="mt-1 text-[10px] text-muted-foreground">Le reste ({100 - Math.round((form.split_etudiant ?? 0.75) * 100)}%) revient à l'institution.</p>
+                      {/* ✅ Affiche en % (0.75 → 75), stocke en float (75 → 0.75) */}
+                      <Input
+                        type="number"
+                        min="0"
+                        max="100"
+                        step="1"
+                        value={splitPctDisplay}
+                        onChange={(e) => setForm({ ...form, split_etudiant: Number(e.target.value) / 100 })}
+                        required
+                      />
+                      <p className="mt-1 text-[10px] text-muted-foreground">
+                        Le reste ({100 - splitPctDisplay}%) revient à l'institution.
+                      </p>
                     </div>
                     <div>
                       <Label>Type de rémunération</Label>

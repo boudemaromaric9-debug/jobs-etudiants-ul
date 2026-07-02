@@ -10,6 +10,7 @@ import { CRENEAU_LABEL } from "@/lib/format";
 import { Plus, X } from "lucide-react";
 import { useState } from "react";
 import { Input } from "@/components/ui/input";
+import { ProfileGuard } from "@/components/profile-guard";
 
 export const Route = createFileRoute("/_authenticated/disponibilites")({
   head: () => ({ meta: [{ title: "Disponibilités — JOBS CAMPUS UL" }] }),
@@ -17,13 +18,13 @@ export const Route = createFileRoute("/_authenticated/disponibilites")({
 });
 
 function DispoPage() {
-  const { user } = useAuth();
+  const { user, isProfileActive } = useAuth();
   const qc = useQueryClient();
   const [date, setDate] = useState("");
 
   const q = useQuery({
     queryKey: ["availabilities", user?.id],
-    enabled: !!user,
+    enabled: !!user && isProfileActive,
     queryFn: async () => {
       const { data } = await supabase.from("availabilities").select("*").eq("user_id", user!.id).order("jour");
       return data ?? [];
@@ -47,6 +48,15 @@ function DispoPage() {
     (acc[a.jour] ||= [] as any).push(a);
     return acc;
   }, {});
+
+  if (!isProfileActive) {
+    return (
+      <>
+        <PageHeader title="Mes disponibilités" description="Indiquez quand vous êtes disponible pour participer." />
+        <PageContent><ProfileGuard /></PageContent>
+      </>
+    );
+  }
 
   return (
     <>

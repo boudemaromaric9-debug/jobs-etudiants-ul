@@ -8,6 +8,7 @@ export function useAuth() {
   const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [roles, setRoles] = useState<AppRole[]>([]);
+  const [profileStatus, setProfileStatus] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -18,10 +19,10 @@ export function useAuth() {
       setSession(s);
       setUser(s?.user ?? null);
       if (s?.user) {
-        // Defer the role fetch to avoid deadlocks
-        setTimeout(() => fetchRoles(s.user!.id), 0);
+        setTimeout(() => fetchRolesAndProfile(s.user!.id), 0);
       } else {
         setRoles([]);
+        setProfileStatus(null);
       }
     });
 
@@ -30,15 +31,21 @@ export function useAuth() {
       setSession(data.session);
       setUser(data.session?.user ?? null);
       if (data.session?.user) {
-        fetchRoles(data.session.user.id).finally(() => setLoading(false));
+        fetchRolesAndProfile(data.session.user.id).finally(() => setLoading(false));
       } else {
         setLoading(false);
       }
     });
 
-    async function fetchRoles(uid: string) {
-      const { data } = await supabase.from("user_roles").select("role").eq("user_id", uid);
-      if (mounted) setRoles((data ?? []).map((r) => r.role as AppRole));
+    async function fetchRolesAndProfile(uid: string) {
+      const [{ data: roleData }, { data: profileData }] = await Promise.all([
+        supabase.from("user_roles").select("role").eq("user_id", uid),
+        supabase.from("profiles").select("status").eq("id", uid).maybeSingle(),
+      ]);
+      if (mounted) {
+        setRoles((roleData ?? []).map((r) => r.role as AppRole));
+        setProfileStatus(profileData?.status ?? null);
+      }
     }
 
     return () => {
@@ -47,13 +54,18 @@ export function useAuth() {
     };
   }, []);
 
+  const isAdmin = roles.includes("admin");
+  const isSubAdmin = roles.includes("sub_admin");
+
   return {
     session,
     user,
     roles,
-    isAdmin: roles.includes("admin"),
+    profileStatus,
+    isAdmin,
     isStudent: roles.includes("student"),
-    isSubAdmin: roles.includes("sub_admin"),
+    isSubAdmin,
+    isProfileActive: isAdmin || isSubAdmin || profileStatus === "active",
     loading,
   };
 }

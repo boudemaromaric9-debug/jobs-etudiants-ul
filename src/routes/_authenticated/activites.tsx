@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ACTIVITY_TYPES, fcfa, formatDate, formatTime } from "@/lib/format";
 import { Calendar, MapPin, Users, ClipboardCheck, X, Mail, Check } from "lucide-react";
+import { ProfileGuard } from "@/components/profile-guard";
 
 export const Route = createFileRoute("/_authenticated/activites")({
   head: () => ({ meta: [{ title: "Activités — JOBS ÉTUDIANTS" }] }),
@@ -19,13 +20,14 @@ export const Route = createFileRoute("/_authenticated/activites")({
 });
 
 function ActivitesPage() {
-  const { user } = useAuth();
+  const { user, isProfileActive } = useAuth();
   const qc = useQueryClient();
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState<string>("all");
 
   const activitiesQ = useQuery({
     queryKey: ["activities-all"],
+    enabled: isProfileActive,
     queryFn: async () => {
       const { data } = await supabase
         .from("activities")
@@ -38,7 +40,7 @@ function ActivitesPage() {
 
   const myRegsQ = useQuery({
     queryKey: ["my-regs", user?.id],
-    enabled: !!user,
+    enabled: !!user && isProfileActive,
     queryFn: async () => {
       const { data } = await supabase.from("registrations").select("*").eq("user_id", user!.id);
       return data ?? [];
@@ -47,7 +49,7 @@ function ActivitesPage() {
 
   const invitationsQ = useQuery({
     queryKey: ["my-invitations", user?.id],
-    enabled: !!user,
+    enabled: !!user && isProfileActive,
     queryFn: async () => {
       const { data } = await supabase
         .from("invitations_activite")
@@ -86,6 +88,14 @@ function ActivitesPage() {
     qc.invalidateQueries({ queryKey: ["my-regs"] });
   }
 
+  if (!isProfileActive) {
+    return (
+      <>
+        <PageHeader title="Activités" description="Inscrivez-vous aux missions ouvertes du campus." />
+        <PageContent><ProfileGuard /></PageContent>
+      </>
+    );
+  }
 
   const filtered = (activitiesQ.data ?? []).filter((a) => {
     const matchSearch = !search || a.titre.toLowerCase().includes(search.toLowerCase()) || a.lieu.toLowerCase().includes(search.toLowerCase());
@@ -119,8 +129,8 @@ function ActivitesPage() {
             </div>
           </div>
         )}
-        <div className="mb-5 flex flex-wrap gap-3">
 
+        <div className="mb-5 flex flex-wrap gap-3">
           <Input placeholder="Rechercher un titre, un lieu..." value={search} onChange={(e) => setSearch(e.target.value)} className="max-w-sm" />
           <Select value={typeFilter} onValueChange={setTypeFilter}>
             <SelectTrigger className="w-[220px]"><SelectValue placeholder="Type" /></SelectTrigger>
