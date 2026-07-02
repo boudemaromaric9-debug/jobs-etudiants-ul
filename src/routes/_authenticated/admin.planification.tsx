@@ -32,17 +32,28 @@ function PlanificationPage() {
   const dispoQ = useQuery({
     queryKey: ["dispo-day", date, creneau],
     queryFn: async () => {
-      let q = supabase.from("availabilities").select("*, profiles(id, nom, prenoms, email, faculte, niveau)").eq("jour", date);
+      let q = supabase.from("availabilities").select("*").eq("jour", date);
       if (creneau !== "all") q = q.eq("creneau", creneau as any);
-      const { data } = await q.order("creneau");
-      return data ?? [];
+      const { data: avails } = await q.order("creneau");
+      if (!avails || avails.length === 0) return [];
+      const userIds = [...new Set(avails.map((a) => a.user_id))];
+      const { data: profs } = await supabase
+        .from("profiles")
+        .select("id, nom, prenoms, email, faculte, niveau")
+        .in("id", userIds);
+      const profMap = new Map((profs ?? []).map((p) => [p.id, p]));
+      return avails.map((a) => ({ ...a, profiles: profMap.get(a.user_id) ?? null }));
     },
   });
 
   const activitiesQ = useQuery({
     queryKey: ["activities-open"],
     queryFn: async () => {
-      const { data } = await supabase.from("activities").select("id, titre, date_activite, heure_debut, heure_fin, lieu, max_participants").in("status", ["draft", "open"]).order("date_activite");
+      const { data } = await supabase
+        .from("activities")
+        .select("id, titre, date_activite, heure_debut, heure_fin, lieu, max_participants")
+        .in("status", ["draft", "open"])
+        .order("date_activite");
       return data ?? [];
     },
   });
@@ -51,7 +62,10 @@ function PlanificationPage() {
     queryKey: ["invited", activityId],
     enabled: !!activityId,
     queryFn: async () => {
-      const { data } = await supabase.from("invitations_activite").select("user_id, status").eq("activity_id", activityId);
+      const { data } = await supabase
+        .from("invitations_activite")
+        .select("user_id, status")
+        .eq("activity_id", activityId);
       return data ?? [];
     },
   });
@@ -113,12 +127,18 @@ function PlanificationPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2"><Users className="h-4 w-4" /> Étudiants disponibles — {formatDate(date)}</CardTitle>
+            <CardTitle className="flex items-center gap-2">
+              <Users className="h-4 w-4" /> Étudiants disponibles — {formatDate(date)}
+            </CardTitle>
           </CardHeader>
           <CardContent>
-            {dispoQ.isLoading ? <div className="text-sm text-muted-foreground">Chargement…</div> : null}
+            {dispoQ.isLoading && (
+              <div className="text-sm text-muted-foreground">Chargement…</div>
+            )}
             {(dispoQ.data ?? []).length === 0 && !dispoQ.isLoading && (
-              <div className="rounded-xl border border-dashed p-12 text-center text-sm text-muted-foreground">Aucune disponibilité pour cette date.</div>
+              <div className="rounded-xl border border-dashed p-12 text-center text-sm text-muted-foreground">
+                Aucune disponibilité pour cette date.
+              </div>
             )}
             <div className="grid gap-2 md:grid-cols-2 lg:grid-cols-3">
               {(dispoQ.data ?? []).map((a: any) => {
@@ -129,15 +149,21 @@ function PlanificationPage() {
                   <button
                     key={a.id}
                     onClick={() => toggle(p.id)}
-                    className={`flex items-start gap-3 rounded-xl border p-3 text-left transition-colors ${isSel ? "border-primary bg-primary/5" : "border-border hover:bg-muted/40"}`}
+                    className={`flex items-start gap-3 rounded-xl border p-3 text-left transition-colors ${
+                      isSel ? "border-primary bg-primary/5" : "border-border hover:bg-muted/40"
+                    }`}
                   >
-                    <div className={`mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded border ${isSel ? "border-primary bg-primary text-primary-foreground" : "border-input"}`}>
+                    <div className={`mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded border ${
+                      isSel ? "border-primary bg-primary text-primary-foreground" : "border-input"
+                    }`}>
                       {isSel && <CheckCheck className="h-3 w-3" />}
                     </div>
                     <div className="min-w-0 flex-1">
                       <div className="truncate text-sm font-semibold">{p.prenoms} {p.nom}</div>
                       <div className="truncate text-xs text-muted-foreground">{p.faculte} · {p.niveau}</div>
-                      <Badge variant="secondary" className="mt-1 text-[10px]">{CRENEAU_LABEL[a.creneau]}</Badge>
+                      <Badge variant="secondary" className="mt-1 text-[10px]">
+                        {CRENEAU_LABEL[a.creneau]}
+                      </Badge>
                     </div>
                   </button>
                 );
@@ -147,29 +173,43 @@ function PlanificationPage() {
         </Card>
 
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-          <DialogContent>
-            <DialogHeader><DialogTitle>Envoyer des invitations</DialogTitle></DialogHeader>
-            <div className="space-y-3">
+          <DialogContent className="max-w-lg w-full flex flex-col max-h-[90vh] p-0">
+            <DialogHeader className="px-6 pt-6 pb-2 shrink-0">
+              <DialogTitle>Envoyer des invitations</DialogTitle>
+            </DialogHeader>
+            <div className="flex-1 overflow-y-auto px-6 py-2 space-y-3">
               <div>
                 <label className="mb-1 block text-xs font-medium">Activité</label>
                 <Select value={activityId} onValueChange={setActivityId}>
                   <SelectTrigger><SelectValue placeholder="Choisir une activité" /></SelectTrigger>
                   <SelectContent>
                     {(activitiesQ.data ?? []).map((a) => (
-                      <SelectItem key={a.id} value={a.id}>{a.titre} — {formatDate(a.date_activite)} {formatTime(a.heure_debut)}</SelectItem>
+                      <SelectItem key={a.id} value={a.id}>
+                        {a.titre} — {formatDate(a.date_activite)} {formatTime(a.heure_debut)}
+                      </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
               <div>
                 <label className="mb-1 block text-xs font-medium">Message (optionnel)</label>
-                <Textarea value={message} onChange={(e) => setMessage(e.target.value)} rows={3} placeholder="Bonjour, nous souhaitons vous inviter..." />
+                <Textarea
+                  value={message}
+                  onChange={(e) => setMessage(e.target.value)}
+                  rows={3}
+                  placeholder="Bonjour, nous souhaitons vous inviter..."
+                />
               </div>
-              <div className="text-xs text-muted-foreground">{selected.size} étudiant(s) sélectionné(s){invitedSet.size > 0 && ` · ${Array.from(selected).filter(u => invitedSet.has(u)).length} déjà invité(s)`}</div>
+              <div className="text-xs text-muted-foreground">
+                {selected.size} étudiant(s) sélectionné(s)
+                {invitedSet.size > 0 && ` · ${Array.from(selected).filter(u => invitedSet.has(u)).length} déjà invité(s)`}
+              </div>
             </div>
-            <DialogFooter>
+            <DialogFooter className="px-6 py-4 border-t shrink-0">
               <Button variant="outline" onClick={() => setDialogOpen(false)}>Annuler</Button>
-              <Button onClick={sendInvitations}><Send className="mr-1 h-4 w-4" /> Envoyer</Button>
+              <Button onClick={sendInvitations}>
+                <Send className="mr-1 h-4 w-4" /> Envoyer
+              </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
