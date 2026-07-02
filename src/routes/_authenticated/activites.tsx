@@ -29,12 +29,27 @@ function ActivitesPage() {
     queryKey: ["activities-all"],
     enabled: isProfileActive,
     queryFn: async () => {
-      const { data } = await supabase
+      const { data: acts } = await supabase
         .from("activities")
-        .select("*, registrations(count)")
+        .select("*")
         .in("status", ["open", "closed", "completed"])
         .order("date_activite", { ascending: true });
-      return data ?? [];
+      if (!acts || acts.length === 0) return [];
+
+      // Compter les inscrits actifs (hors annulés) pour chaque activité
+      const counts = await Promise.all(
+        acts.map(async (a) => {
+          const { count } = await supabase
+            .from("registrations")
+            .select("*", { count: "exact", head: true })
+            .eq("activity_id", a.id)
+            .neq("status", "cancelled");
+          return { id: a.id, count: count ?? 0 };
+        })
+      );
+
+      const countMap = new Map(counts.map((c) => [c.id, c.count]));
+      return acts.map((a) => ({ ...a, activeCount: countMap.get(a.id) ?? 0 }));
     },
   });
 
@@ -69,12 +84,34 @@ function ActivitesPage() {
     toast.success(status === "accepted" ? "Invitation acceptée !" : "Invitation refusée.");
     qc.invalidateQueries({ queryKey: ["my-invitations"] });
     qc.invalidateQueries({ queryKey: ["my-regs"] });
+    qc.invalidateQueries({ queryKey: ["activities-all"] });
   }
 
   async function register(activityId: string, remuneration: number) {
-    const { error } = await supabase.from("registrations").insert({
-      activity_id: activityId, user_id: user!.id, status: "registered", montant_du: remuneration,
-    });
+    // Upsert au lieu d'un simple insert : si une ligne existe déjà pour ce
+    // couple (activity_id, user_id) — ex: une ancienne désinscription
+    // ("cancelled") — elle est réactivée au lieu de provoquer une violation
+    // de la contrainte unique registrations_activity_id_user_id_key.
+    const { error } = await supabase.from("registrations").upsert(
+      {
+        activity_id: activityId,
+        user_id: user!.id,
+        status: "registered",
+        montant_du: remuneration,
+        // Réinitialisation des champs pour éviter d'hériter de données
+        // d'une inscription précédente (check-in, scores, etc.)
+        // NB: heures_effectuees et montant_du sont NOT NULL en base.
+        check_in: null,
+        check_out: null,
+        heures_effectuees: 0,
+        score_ponctualite: null,
+        score_discipline: null,
+        score_qualite: null,
+        note: null,
+        montant_gagne: 0,
+      },
+      { onConflict: "activity_id,user_id" }
+    );
     if (error) { toast.error(error.message); return; }
     toast.success("Inscription confirmée !");
     qc.invalidateQueries({ queryKey: ["my-regs"] });
@@ -86,6 +123,7 @@ function ActivitesPage() {
     if (error) { toast.error(error.message); return; }
     toast.success("Désistement enregistré.");
     qc.invalidateQueries({ queryKey: ["my-regs"] });
+    qc.invalidateQueries({ queryKey: ["activities-all"] });
   }
 
   if (!isProfileActive) {
@@ -97,7 +135,7 @@ function ActivitesPage() {
     );
   }
 
-  const filtered = (activitiesQ.data ?? []).filter((a) => {
+  const filtered = (activitiesQ.data ?? []).filter((a: any) => {
     const matchSearch = !search || a.titre.toLowerCase().includes(search.toLowerCase()) || a.lieu.toLowerCase().includes(search.toLowerCase());
     const matchType = typeFilter === "all" || a.type === typeFilter;
     return matchSearch && matchType;
@@ -141,16 +179,16 @@ function ActivitesPage() {
           </Select>
         </div>
 
-        {activitiesQ.isLoading ? <div className="text-sm text-muted-foreground">Chargement...</div> : null}
+        {activitiesQ.isLoading && <div className="text-sm text-muted-foreground">Chargement...</div>}
         {filtered.length === 0 && !activitiesQ.isLoading && (
           <div className="rounded-xl border border-dashed p-12 text-center text-sm text-muted-foreground">Aucune activité disponible.</div>
         )}
 
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {filtered.map((a) => {
+          {filtered.map((a: any) => {
             const reg = myRegByAct.get(a.id);
             const isRegistered = reg && reg.status !== "cancelled";
-            const participantCount = a.registrations?.[0]?.count ?? 0;
+            const participantCount = a.activeCount ?? 0;
             const isFull = participantCount >= a.max_participants;
             const isPast = new Date(a.date_activite) < new Date(new Date().toDateString());
             return (
@@ -162,9 +200,16 @@ function ActivitesPage() {
                 <CardContent className="space-y-3 p-4">
                   {a.description && <p className="line-clamp-2 text-sm text-muted-foreground">{a.description}</p>}
                   <div className="space-y-1.5 text-sm">
-                    <div className="flex items-center gap-2 text-muted-foreground"><Calendar className="h-4 w-4" /> {formatDate(a.date_activite)} · {formatTime(a.heure_debut)}–{formatTime(a.heure_fin)}</div>
-                    <div className="flex items-center gap-2 text-muted-foreground"><MapPin className="h-4 w-4" /> {a.lieu}</div>
-                    <div className="flex items-center gap-2 text-muted-foreground"><Users className="h-4 w-4" /> {participantCount} / {a.max_participants} inscrits</div>
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <Calendar className="h-4 w-4" /> {formatDate(a.date_activite)} · {formatTime(a.heure_debut)}–{formatTime(a.heure_fin)}
+                    </div>
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <MapPin className="h-4 w-4" /> {a.lieu}
+                    </div>
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <Users className="h-4 w-4" /> {participantCount} / {a.max_participants} inscrits
+                      {isFull && <Badge variant="destructive" className="ml-1 text-[10px]">Complet</Badge>}
+                    </div>
                   </div>
                   <div className="flex items-center justify-between border-t border-border pt-3">
                     <div>
@@ -172,13 +217,21 @@ function ActivitesPage() {
                       <div className="font-display text-lg font-bold text-success">{fcfa(a.remuneration)}</div>
                     </div>
                     {isRegistered ? (
-                      <Button size="sm" variant="outline" onClick={() => unregister(reg!.id)}><X className="mr-1 h-4 w-4" /> Se désister</Button>
-                    ) : a.status !== "open" || isPast ? (
-                      <Button size="sm" disabled>{isPast ? "Passée" : a.status === "completed" ? "Terminée" : "Fermée"}</Button>
-                    ) : isFull ? (
+                      <Button size="sm" variant="outline" onClick={() => unregister(reg!.id)}>
+                        <X className="mr-1 h-4 w-4" /> Se désister
+                      </Button>
+                    ) : isPast ? (
+                      <Button size="sm" disabled>Passée</Button>
+                    ) : a.status === "completed" ? (
+                      <Button size="sm" disabled>Terminée</Button>
+                    ) : isFull || a.status === "closed" ? (
                       <Button size="sm" disabled>Complet</Button>
+                    ) : a.status !== "open" ? (
+                      <Button size="sm" disabled>Fermée</Button>
                     ) : (
-                      <Button size="sm" onClick={() => register(a.id, Number(a.remuneration))}><ClipboardCheck className="mr-1 h-4 w-4" /> S'inscrire</Button>
+                      <Button size="sm" onClick={() => register(a.id, Number(a.remuneration))}>
+                        <ClipboardCheck className="mr-1 h-4 w-4" /> S'inscrire
+                      </Button>
                     )}
                   </div>
                 </CardContent>
