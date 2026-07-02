@@ -29,6 +29,7 @@ import { Route as AuthenticatedScannerIndexRouteImport } from './routes/_authent
 import { Route as AuthenticatedAdminIndexRouteImport } from './routes/_authenticated/admin.index'
 import { Route as AuthenticatedScannerActivityIdRouteImport } from './routes/_authenticated/scanner.$activityId'
 import { Route as AuthenticatedAdminStatistiquesRouteImport } from './routes/_authenticated/admin.statistiques'
+import { Route as AuthenticatedAdminPlanificationRouteImport } from './routes/_authenticated/admin.planification'
 import { Route as AuthenticatedAdminPaiementsRouteImport } from './routes/_authenticated/admin.paiements'
 import { Route as AuthenticatedAdminGalerieRouteImport } from './routes/_authenticated/admin.galerie'
 import { Route as AuthenticatedAdminEtudiantsRouteImport } from './routes/_authenticated/admin.etudiants'
@@ -138,6 +139,12 @@ const AuthenticatedAdminStatistiquesRoute =
     path: '/statistiques',
     getParentRoute: () => AuthenticatedAdminRoute,
   } as any)
+const AuthenticatedAdminPlanificationRoute =
+  AuthenticatedAdminPlanificationRouteImport.update({
+    id: '/planification',
+    path: '/planification',
+    getParentRoute: () => AuthenticatedAdminRoute,
+  } as any)
 const AuthenticatedAdminPaiementsRoute =
   AuthenticatedAdminPaiementsRouteImport.update({
     id: '/paiements',
@@ -190,6 +197,7 @@ export interface FileRoutesByFullPath {
   '/admin/etudiants': typeof AuthenticatedAdminEtudiantsRoute
   '/admin/galerie': typeof AuthenticatedAdminGalerieRoute
   '/admin/paiements': typeof AuthenticatedAdminPaiementsRoute
+  '/admin/planification': typeof AuthenticatedAdminPlanificationRoute
   '/admin/statistiques': typeof AuthenticatedAdminStatistiquesRoute
   '/scanner/$activityId': typeof AuthenticatedScannerActivityIdRoute
   '/admin/': typeof AuthenticatedAdminIndexRoute
@@ -214,6 +222,7 @@ export interface FileRoutesByTo {
   '/admin/etudiants': typeof AuthenticatedAdminEtudiantsRoute
   '/admin/galerie': typeof AuthenticatedAdminGalerieRoute
   '/admin/paiements': typeof AuthenticatedAdminPaiementsRoute
+  '/admin/planification': typeof AuthenticatedAdminPlanificationRoute
   '/admin/statistiques': typeof AuthenticatedAdminStatistiquesRoute
   '/scanner/$activityId': typeof AuthenticatedScannerActivityIdRoute
   '/admin': typeof AuthenticatedAdminIndexRoute
@@ -242,6 +251,7 @@ export interface FileRoutesById {
   '/_authenticated/admin/etudiants': typeof AuthenticatedAdminEtudiantsRoute
   '/_authenticated/admin/galerie': typeof AuthenticatedAdminGalerieRoute
   '/_authenticated/admin/paiements': typeof AuthenticatedAdminPaiementsRoute
+  '/_authenticated/admin/planification': typeof AuthenticatedAdminPlanificationRoute
   '/_authenticated/admin/statistiques': typeof AuthenticatedAdminStatistiquesRoute
   '/_authenticated/scanner/$activityId': typeof AuthenticatedScannerActivityIdRoute
   '/_authenticated/admin/': typeof AuthenticatedAdminIndexRoute
@@ -270,6 +280,7 @@ export interface FileRouteTypes {
     | '/admin/etudiants'
     | '/admin/galerie'
     | '/admin/paiements'
+    | '/admin/planification'
     | '/admin/statistiques'
     | '/scanner/$activityId'
     | '/admin/'
@@ -294,6 +305,7 @@ export interface FileRouteTypes {
     | '/admin/etudiants'
     | '/admin/galerie'
     | '/admin/paiements'
+    | '/admin/planification'
     | '/admin/statistiques'
     | '/scanner/$activityId'
     | '/admin'
@@ -321,6 +333,7 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/etudiants'
     | '/_authenticated/admin/galerie'
     | '/_authenticated/admin/paiements'
+    | '/_authenticated/admin/planification'
     | '/_authenticated/admin/statistiques'
     | '/_authenticated/scanner/$activityId'
     | '/_authenticated/admin/'
@@ -481,6 +494,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminStatistiquesRouteImport
       parentRoute: typeof AuthenticatedAdminRoute
     }
+    '/_authenticated/admin/planification': {
+      id: '/_authenticated/admin/planification'
+      path: '/planification'
+      fullPath: '/admin/planification'
+      preLoaderRoute: typeof AuthenticatedAdminPlanificationRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
     '/_authenticated/admin/paiements': {
       id: '/_authenticated/admin/paiements'
       path: '/paiements'
@@ -525,6 +545,7 @@ interface AuthenticatedAdminRouteChildren {
   AuthenticatedAdminEtudiantsRoute: typeof AuthenticatedAdminEtudiantsRoute
   AuthenticatedAdminGalerieRoute: typeof AuthenticatedAdminGalerieRoute
   AuthenticatedAdminPaiementsRoute: typeof AuthenticatedAdminPaiementsRoute
+  AuthenticatedAdminPlanificationRoute: typeof AuthenticatedAdminPlanificationRoute
   AuthenticatedAdminStatistiquesRoute: typeof AuthenticatedAdminStatistiquesRoute
   AuthenticatedAdminIndexRoute: typeof AuthenticatedAdminIndexRoute
 }
@@ -535,6 +556,7 @@ const AuthenticatedAdminRouteChildren: AuthenticatedAdminRouteChildren = {
   AuthenticatedAdminEtudiantsRoute: AuthenticatedAdminEtudiantsRoute,
   AuthenticatedAdminGalerieRoute: AuthenticatedAdminGalerieRoute,
   AuthenticatedAdminPaiementsRoute: AuthenticatedAdminPaiementsRoute,
+  AuthenticatedAdminPlanificationRoute: AuthenticatedAdminPlanificationRoute,
   AuthenticatedAdminStatistiquesRoute: AuthenticatedAdminStatistiquesRoute,
   AuthenticatedAdminIndexRoute: AuthenticatedAdminIndexRoute,
 }
