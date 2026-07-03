@@ -48,10 +48,12 @@ function AuthenticatedLayout() {
     navigate({ to: "/auth", replace: true });
   }
 
+  // AJOUT : "Galerie" manquait dans la nav étudiant
   const studentNav = [
     { to: "/dashboard", icon: LayoutDashboard, label: "Tableau de bord" },
     { to: "/activites", icon: ClipboardList, label: "Activités" },
     { to: "/disponibilites", icon: Calendar, label: "Disponibilités" },
+    { to: "/galerie", icon: ImageIcon, label: "Galerie" },
     { to: "/profil", icon: User, label: "Mon profil" },
   ];
 
@@ -157,11 +159,33 @@ function AuthenticatedLayout() {
             </div>
           </header>
 
-          <div className="flex-1">
+          {/* AJOUT : pb-20 md:pb-0 pour laisser la place à la nav mobile en bas */}
+          <div className="flex-1 pb-20 md:pb-0">
             <Outlet />
           </div>
         </main>
       </div>
+
+      {/* AJOUT : navigation mobile en bas de page, absente de l'ancien fichier */}
+      <nav className="fixed inset-x-0 bottom-0 z-30 flex items-stretch justify-around border-t border-border bg-background/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl md:hidden">
+        {studentNav.slice(0, 5).map((item) => {
+          const active = pathname === item.to || (item.to !== "/dashboard" && pathname.startsWith(item.to));
+          const Icon = item.icon;
+          return (
+            <Link
+              key={item.to}
+              to={item.to}
+              className={cn(
+                "flex min-h-[56px] flex-1 flex-col items-center justify-center gap-0.5 px-2 py-1.5 text-[10px] font-medium transition-colors",
+                active ? "text-primary" : "text-muted-foreground",
+              )}
+            >
+              <Icon className={cn("h-5 w-5", active && "drop-shadow-[0_0_6px_var(--color-primary)]")} />
+              <span className="truncate">{item.label.split(" ")[0]}</span>
+            </Link>
+          );
+        })}
+      </nav>
     </div>
   );
 }

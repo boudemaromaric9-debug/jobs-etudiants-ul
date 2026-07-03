@@ -7,7 +7,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { fcfa, formatDate } from "@/lib/format";
-import { Wallet, Clock, CheckCircle2, FileDown, Printer, Building2 } from "lucide-react";
+import { Wallet, Clock, CheckCircle2, FileDown, Printer, Building2, FileText } from "lucide-react";
+import { downloadAdminPaymentsPdf } from "@/lib/pdf-bulletin";
 
 export const Route = createFileRoute("/_authenticated/admin/paiements")({
   head: () => ({ meta: [{ title: "Paiements — Admin" }] }),
@@ -234,9 +235,14 @@ function PaiementsAdmin() {
         title="Paiements"
         description="La répartition étudiant·e / institution est définie par activité. Validation admin obligatoire avant virement."
         action={
-          <Button variant="outline" onClick={exportCSV}>
-            <FileDown className="mr-1 h-4 w-4" />Export CSV
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={exportCSV}>
+              <FileDown className="mr-1 h-4 w-4" />Export CSV
+            </Button>
+            <Button variant="outline" onClick={() => downloadAdminPaymentsPdf((payments.data ?? []) as any)}>
+              <FileText className="mr-1 h-4 w-4" />PDF
+            </Button>
+          </div>
         }
       />
       <PageContent>

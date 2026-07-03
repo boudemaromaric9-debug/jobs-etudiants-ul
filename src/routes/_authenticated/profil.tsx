@@ -12,9 +12,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Camera, Trash2, Loader2 } from "lucide-react";
+import { Camera, Trash2, Loader2, FileDown } from "lucide-react";
 import { FACULTES, NIVEAUX } from "@/lib/format";
 import { StudentQrCard } from "@/components/student-qr-card";
+import { downloadStudentBulletin } from "@/lib/pdf-bulletin";
 
 export const Route = createFileRoute("/_authenticated/profil")({
   head: () => ({ meta: [{ title: "Profil — JOBS ÉTUDIANTS · Université de Lomé" }] }),
@@ -180,16 +181,45 @@ function ProfilPage() {
         </form>
 
         {user && (
-          <div className="mt-8 max-w-3xl">
+          <div className="mt-8 max-w-3xl space-y-6">
             <StudentQrCard
               userId={user.id}
               name={[form.prenoms, form.nom].filter(Boolean).join(" ") || user.email || undefined}
               faculte={form.faculte}
               niveau={form.niveau}
             />
+            <BulletinCard userId={user.id} student={{ nom: form.nom, prenoms: form.prenoms, faculte: form.faculte, niveau: form.niveau }} />
           </div>
         )}
       </PageContent>
     </>
+  );
+}
+
+function BulletinCard({ userId, student }: { userId: string; student: { nom: string; prenoms: string; faculte: string; niveau: string } }) {
+  const [busy, setBusy] = useState(false);
+  async function download() {
+    setBusy(true);
+    const { data, error } = await supabase
+      .from("payments")
+      .select("montant,montant_etudiant,montant_institution,status,date_paiement,created_at,activities(titre,date_activite,lieu)")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false });
+    setBusy(false);
+    if (error) { toast.error(error.message); return; }
+    if (!data || data.length === 0) { toast.info("Aucun bulletin disponible pour le moment."); return; }
+    downloadStudentBulletin(student, data as any);
+  }
+  return (
+    <Card>
+      <CardHeader><CardTitle>Mon bulletin de rémunération</CardTitle></CardHeader>
+      <CardContent className="flex flex-wrap items-center justify-between gap-4">
+        <p className="text-sm text-muted-foreground">Téléchargez le récapitulatif PDF officiel de vos rémunérations (part étudiant·e 75 %).</p>
+        <Button onClick={download} disabled={busy}>
+          {busy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileDown className="mr-2 h-4 w-4" />}
+          Télécharger le PDF
+        </Button>
+      </CardContent>
+    </Card>
   );
 }
