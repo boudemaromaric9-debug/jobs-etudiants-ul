@@ -43,6 +43,11 @@ function EtudiantsAdmin() {
   });
 
   async function setStatus(id: string, status: "active" | "pending" | "suspended") {
+    // Sécurité : empêche toute modification du statut de l'admin principal
+    if (roleMap.get(id)?.has("admin")) {
+      toast.error("Impossible de modifier le statut de l'administrateur principal");
+      return;
+    }
     const { error } = await supabase.from("profiles").update({ status }).eq("id", id);
     if (error) { toast.error(error.message); return; }
     toast.success("Statut mis à jour");
@@ -50,12 +55,21 @@ function EtudiantsAdmin() {
   }
 
   async function toggleSubAdmin(userId: string, isSub: boolean) {
+    // Sécurité : empêche toute modification du rôle de l'admin principal
+    if (roleMap.get(userId)?.has("admin")) {
+      toast.error("Impossible de modifier le rôle de l'administrateur principal");
+      return;
+    }
     if (isSub) {
-      const { error } = await supabase.from("user_roles").delete().eq("user_id", userId).eq("role", "sub_admin");
+      // Retire le rôle sous-admin en repassant l'utilisateur en "student"
+      const { error } = await supabase.from("user_roles").update({ role: "student" }).eq("user_id", userId);
       if (error) { toast.error(error.message); return; }
       toast.success("Rôle sous-admin retiré");
     } else {
-      const { error } = await supabase.from("user_roles").insert({ user_id: userId, role: "sub_admin" });
+      // Un seul rôle par utilisateur (contrainte unique sur user_id) : on upsert
+      const { error } = await supabase
+        .from("user_roles")
+        .upsert({ user_id: userId, role: "sub_admin" }, { onConflict: "user_id" });
       if (error) { toast.error(error.message); return; }
       toast.success("Rôle sous-admin attribué");
     }
@@ -102,33 +116,42 @@ function EtudiantsAdmin() {
                   </tr>
                 </thead>
                 <tbody>
-                  {filtered.map((p) => (
-                    <tr key={p.id} className="border-b last:border-0 hover:bg-muted/30">
-                      <td className="px-4 py-3 font-medium">{p.nom} {p.prenoms}</td>
-                      <td className="px-4 py-3 text-muted-foreground">{p.faculte || "—"} · {p.niveau || "—"}</td>
-                      <td className="px-4 py-3 text-muted-foreground">{p.telephone || p.email || "—"}</td>
-                      <td className="px-4 py-3">
-                        <div className="flex flex-wrap items-center gap-1">
-                          <Badge variant={p.status === "active" ? "default" : p.status === "pending" ? "secondary" : "destructive"}>
-                            {p.status === "active" ? "Actif" : p.status === "pending" ? "En attente" : "Suspendu"}
-                          </Badge>
-                          {roleMap.get(p.id)?.has("admin") && <Badge variant="outline" className="border-accent text-accent">Admin</Badge>}
-                          {roleMap.get(p.id)?.has("sub_admin") && <Badge variant="outline" className="border-primary text-primary"><ScanLine className="mr-1 h-3 w-3" />Sous-admin</Badge>}
-                        </div>
-                      </td>
-                      <td className="px-4 py-3 text-right">
-                        <div className="flex flex-wrap justify-end gap-1">
-                          {p.status !== "active" && <Button size="sm" variant="outline" onClick={() => setStatus(p.id, "active")}><CheckCircle2 className="mr-1 h-4 w-4" />Valider</Button>}
-                          {p.status === "active" && <Button size="sm" variant="outline" onClick={() => setStatus(p.id, "suspended")}><Pause className="mr-1 h-4 w-4" />Suspendre</Button>}
-                          {p.status === "suspended" && <Button size="sm" variant="outline" onClick={() => setStatus(p.id, "active")}><Play className="mr-1 h-4 w-4" />Réactiver</Button>}
-                          {p.status === "pending" && <Button size="sm" variant="ghost" onClick={() => setStatus(p.id, "suspended")}><XCircle className="mr-1 h-4 w-4" />Rejeter</Button>}
-                          <Button size="sm" variant={roleMap.get(p.id)?.has("sub_admin") ? "secondary" : "outline"} onClick={() => toggleSubAdmin(p.id, !!roleMap.get(p.id)?.has("sub_admin"))}>
-                            <ScanLine className="mr-1 h-4 w-4" />{roleMap.get(p.id)?.has("sub_admin") ? "Retirer sous-admin" : "Promouvoir sous-admin"}
-                          </Button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
+                  {filtered.map((p) => {
+                    const isMainAdmin = roleMap.get(p.id)?.has("admin");
+                    return (
+                      <tr key={p.id} className="border-b last:border-0 hover:bg-muted/30">
+                        <td className="px-4 py-3 font-medium">{p.nom} {p.prenoms}</td>
+                        <td className="px-4 py-3 text-muted-foreground">{p.faculte || "—"} · {p.niveau || "—"}</td>
+                        <td className="px-4 py-3 text-muted-foreground">{p.telephone || p.email || "—"}</td>
+                        <td className="px-4 py-3">
+                          <div className="flex flex-wrap items-center gap-1">
+                            <Badge variant={p.status === "active" ? "default" : p.status === "pending" ? "secondary" : "destructive"}>
+                              {p.status === "active" ? "Actif" : p.status === "pending" ? "En attente" : "Suspendu"}
+                            </Badge>
+                            {isMainAdmin && <Badge variant="outline" className="border-accent text-accent">Admin</Badge>}
+                            {roleMap.get(p.id)?.has("sub_admin") && <Badge variant="outline" className="border-primary text-primary"><ScanLine className="mr-1 h-3 w-3" />Sous-admin</Badge>}
+                          </div>
+                        </td>
+                        <td className="px-4 py-3 text-right">
+                          {isMainAdmin ? (
+                            <Badge variant="outline" className="border-accent text-accent">
+                              Administrateur principal — protégé
+                            </Badge>
+                          ) : (
+                            <div className="flex flex-wrap justify-end gap-1">
+                              {p.status !== "active" && <Button size="sm" variant="outline" onClick={() => setStatus(p.id, "active")}><CheckCircle2 className="mr-1 h-4 w-4" />Valider</Button>}
+                              {p.status === "active" && <Button size="sm" variant="outline" onClick={() => setStatus(p.id, "suspended")}><Pause className="mr-1 h-4 w-4" />Suspendre</Button>}
+                              {p.status === "suspended" && <Button size="sm" variant="outline" onClick={() => setStatus(p.id, "active")}><Play className="mr-1 h-4 w-4" />Réactiver</Button>}
+                              {p.status === "pending" && <Button size="sm" variant="ghost" onClick={() => setStatus(p.id, "suspended")}><XCircle className="mr-1 h-4 w-4" />Rejeter</Button>}
+                              <Button size="sm" variant={roleMap.get(p.id)?.has("sub_admin") ? "secondary" : "outline"} onClick={() => toggleSubAdmin(p.id, !!roleMap.get(p.id)?.has("sub_admin"))}>
+                                <ScanLine className="mr-1 h-4 w-4" />{roleMap.get(p.id)?.has("sub_admin") ? "Retirer sous-admin" : "Promouvoir sous-admin"}
+                              </Button>
+                            </div>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
                   {filtered.length === 0 && <tr><td colSpan={5} className="px-4 py-10 text-center text-muted-foreground">Aucun étudiant.</td></tr>}
                 </tbody>
               </table>

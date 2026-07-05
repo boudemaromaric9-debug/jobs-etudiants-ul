@@ -65,6 +65,7 @@ function AuthenticatedLayout() {
     { to: "/admin/paiements", icon: Wallet, label: "Paiements" },
     { to: "/admin/galerie", icon: ImageIcon, label: "Galerie" },
     { to: "/admin/annonces", icon: Megaphone, label: "Annonces" },
+    { to: "/admin/sous-admins", icon: ShieldCheck, label: "Sous-admins" },
     { to: "/admin/statistiques", icon: BarChart3, label: "Statistiques" },
   ];
 
