@@ -6,7 +6,7 @@ import { Card } from "@/components/ui/card";
 import { Image as ImageIcon, Film } from "lucide-react";
 import { formatDate } from "@/lib/format";
 
-export const Route = createFileRoute("/_authenticated/galerie")({
+export const Route = createFileRoute("/_authenticated/espace-galerie")({
   head: () => ({ meta: [{ title: "Galerie — JOBS ÉTUDIANTS UL" }] }),
   component: GaleriePage,
 });

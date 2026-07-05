@@ -53,7 +53,7 @@ function AuthenticatedLayout() {
     { to: "/dashboard", icon: LayoutDashboard, label: "Tableau de bord" },
     { to: "/activites", icon: ClipboardList, label: "Activités" },
     { to: "/disponibilites", icon: Calendar, label: "Disponibilités" },
-    { to: "/galerie", icon: ImageIcon, label: "Galerie" },
+    { to: "/espace-galerie", icon: ImageIcon, label: "Galerie" },
     { to: "/profil", icon: User, label: "Mon profil" },
   ];
 
