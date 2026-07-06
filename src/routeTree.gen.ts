@@ -20,6 +20,7 @@ import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedScannerRouteImport } from './routes/_authenticated/scanner'
 import { Route as AuthenticatedProfilRouteImport } from './routes/_authenticated/profil'
+import { Route as AuthenticatedEspaceGalerieRouteImport } from './routes/_authenticated/espace-galerie'
 import { Route as AuthenticatedDisponibilitesRouteImport } from './routes/_authenticated/disponibilites'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedCallbackRouteImport } from './routes/_authenticated/callback'
@@ -91,6 +92,12 @@ const AuthenticatedProfilRoute = AuthenticatedProfilRouteImport.update({
   path: '/profil',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedEspaceGalerieRoute =
+  AuthenticatedEspaceGalerieRouteImport.update({
+    id: '/espace-galerie',
+    path: '/espace-galerie',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedDisponibilitesRoute =
   AuthenticatedDisponibilitesRouteImport.update({
     id: '/disponibilites',
@@ -197,6 +204,7 @@ export interface FileRoutesByFullPath {
   '/callback': typeof AuthenticatedCallbackRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/disponibilites': typeof AuthenticatedDisponibilitesRoute
+  '/espace-galerie': typeof AuthenticatedEspaceGalerieRoute
   '/profil': typeof AuthenticatedProfilRoute
   '/scanner': typeof AuthenticatedScannerRouteWithChildren
   '/admin/activites': typeof AuthenticatedAdminActivitesRoute
@@ -224,6 +232,7 @@ export interface FileRoutesByTo {
   '/callback': typeof AuthenticatedCallbackRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/disponibilites': typeof AuthenticatedDisponibilitesRoute
+  '/espace-galerie': typeof AuthenticatedEspaceGalerieRoute
   '/profil': typeof AuthenticatedProfilRoute
   '/admin/activites': typeof AuthenticatedAdminActivitesRoute
   '/admin/annonces': typeof AuthenticatedAdminAnnoncesRoute
@@ -253,6 +262,7 @@ export interface FileRoutesById {
   '/_authenticated/callback': typeof AuthenticatedCallbackRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/disponibilites': typeof AuthenticatedDisponibilitesRoute
+  '/_authenticated/espace-galerie': typeof AuthenticatedEspaceGalerieRoute
   '/_authenticated/profil': typeof AuthenticatedProfilRoute
   '/_authenticated/scanner': typeof AuthenticatedScannerRouteWithChildren
   '/_authenticated/admin/activites': typeof AuthenticatedAdminActivitesRoute
@@ -283,6 +293,7 @@ export interface FileRouteTypes {
     | '/callback'
     | '/dashboard'
     | '/disponibilites'
+    | '/espace-galerie'
     | '/profil'
     | '/scanner'
     | '/admin/activites'
@@ -310,6 +321,7 @@ export interface FileRouteTypes {
     | '/callback'
     | '/dashboard'
     | '/disponibilites'
+    | '/espace-galerie'
     | '/profil'
     | '/admin/activites'
     | '/admin/annonces'
@@ -338,6 +350,7 @@ export interface FileRouteTypes {
     | '/_authenticated/callback'
     | '/_authenticated/dashboard'
     | '/_authenticated/disponibilites'
+    | '/_authenticated/espace-galerie'
     | '/_authenticated/profil'
     | '/_authenticated/scanner'
     | '/_authenticated/admin/activites'
@@ -442,6 +455,13 @@ declare module '@tanstack/react-router' {
       path: '/profil'
       fullPath: '/profil'
       preLoaderRoute: typeof AuthenticatedProfilRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/espace-galerie': {
+      id: '/_authenticated/espace-galerie'
+      path: '/espace-galerie'
+      fullPath: '/espace-galerie'
+      preLoaderRoute: typeof AuthenticatedEspaceGalerieRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/disponibilites': {
@@ -605,6 +625,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedCallbackRoute: typeof AuthenticatedCallbackRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedDisponibilitesRoute: typeof AuthenticatedDisponibilitesRoute
+  AuthenticatedEspaceGalerieRoute: typeof AuthenticatedEspaceGalerieRoute
   AuthenticatedProfilRoute: typeof AuthenticatedProfilRoute
   AuthenticatedScannerRoute: typeof AuthenticatedScannerRouteWithChildren
 }
@@ -615,6 +636,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedCallbackRoute: AuthenticatedCallbackRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedDisponibilitesRoute: AuthenticatedDisponibilitesRoute,
+  AuthenticatedEspaceGalerieRoute: AuthenticatedEspaceGalerieRoute,
   AuthenticatedProfilRoute: AuthenticatedProfilRoute,
   AuthenticatedScannerRoute: AuthenticatedScannerRouteWithChildren,
 }

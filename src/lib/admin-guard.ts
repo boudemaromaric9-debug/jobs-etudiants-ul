@@ -24,11 +24,15 @@ export async function requireAdminModule(moduleKey: ModuleKey | null) {
   if (roleSet.has("admin")) return; // admin passe partout
   if (!roleSet.has("sub_admin")) throw redirect({ to: "/dashboard" });
 
-  // Sub-admin : vérifier la permission module côté serveur (RPC has_module_permission).
+  // Sub-admin : vérifier la permission module (lecture directe, protégée par RLS —
+  // la policy sur sub_admin_permissions ne renvoie que les lignes user_id = auth.uid()).
   if (moduleKey === null) throw redirect({ to: "/admin" }); // module non délégable
-  const { data: allowed, error } = await supabase.rpc("has_module_permission", {
-    _user_id: u.user.id,
-    _module_key: moduleKey,
-  });
-  if (error || !allowed) throw redirect({ to: "/admin" });
+  const { data: perm, error } = await supabase
+    .from("sub_admin_permissions")
+    .select("is_active")
+    .eq("user_id", u.user.id)
+    .eq("module_key", moduleKey)
+    .eq("is_active", true)
+    .maybeSingle();
+  if (error || !perm) throw redirect({ to: "/admin" });
 }
