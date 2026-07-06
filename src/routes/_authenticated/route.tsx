@@ -1,6 +1,7 @@
 import { createFileRoute, Outlet, redirect, Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
+import { useSubAdminPermissions } from "@/hooks/use-sub-admin-permissions"; // ⚠️ adapte le chemin exact si différent
 import { useAvatarUrl } from "@/hooks/use-avatar-url";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -26,6 +27,7 @@ export const Route = createFileRoute("/_authenticated")({
 
 function AuthenticatedLayout() {
   const { isAdmin, isSubAdmin, user } = useAuth();
+  const { hasModule } = useSubAdminPermissions();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
@@ -57,17 +59,23 @@ function AuthenticatedLayout() {
     { to: "/profil", icon: User, label: "Mon profil" },
   ];
 
-  const adminNav = [
-    { to: "/admin", icon: ShieldCheck, label: "Vue d'ensemble" },
-    { to: "/admin/etudiants", icon: Users, label: "Étudiants" },
-    { to: "/admin/activites", icon: ClipboardList, label: "Activités" },
-    { to: "/admin/planification", icon: CalendarClock, label: "Planification" },
-    { to: "/admin/paiements", icon: Wallet, label: "Paiements" },
-    { to: "/admin/galerie", icon: ImageIcon, label: "Galerie" },
-    { to: "/admin/annonces", icon: Megaphone, label: "Annonces" },
-    { to: "/admin/sous-admins", icon: ShieldCheck, label: "Sous-admins" },
-    { to: "/admin/statistiques", icon: BarChart3, label: "Statistiques" },
+  // AJOUT : moduleKey associe chaque lien à sa clé de permission (null = réservé admin plein)
+  const adminNav: { to: string; icon: any; label: string; moduleKey: string | null }[] = [
+    { to: "/admin", icon: ShieldCheck, label: "Vue d'ensemble", moduleKey: null },
+    { to: "/admin/etudiants", icon: Users, label: "Étudiants", moduleKey: "students" },
+    { to: "/admin/activites", icon: ClipboardList, label: "Activités", moduleKey: "activities" },
+    { to: "/admin/planification", icon: CalendarClock, label: "Planification", moduleKey: "planning" },
+    { to: "/admin/paiements", icon: Wallet, label: "Paiements", moduleKey: "payments" },
+    { to: "/admin/galerie", icon: ImageIcon, label: "Galerie", moduleKey: "gallery" },
+    { to: "/admin/annonces", icon: Megaphone, label: "Annonces", moduleKey: "announcements" },
+    { to: "/admin/sous-admins", icon: ShieldCheck, label: "Sous-admins", moduleKey: null },
+    { to: "/admin/statistiques", icon: BarChart3, label: "Statistiques", moduleKey: "statistics" },
   ];
+
+  // AJOUT : admin plein voit tout, sous-admin ne voit que ses modules actifs
+  const visibleAdminNav = isAdmin
+    ? adminNav
+    : adminNav.filter((item) => item.moduleKey && hasModule(item.moduleKey as any));
 
   const initials = ((profileQ.data?.prenoms?.[0] || "") + (profileQ.data?.nom?.[0] || "")) || (user?.email ?? "U").slice(0, 2).toUpperCase();
 
@@ -108,11 +116,12 @@ function AuthenticatedLayout() {
                 </div>
               </>
             )}
-            {isAdmin && (
+            {/* CORRIGÉ : était `isAdmin &&` uniquement, exclut désormais isSubAdmin même avec des modules actifs */}
+            {(isAdmin || isSubAdmin) && visibleAdminNav.length > 0 && (
               <>
                 <div className="mt-5 px-3 pb-1 pt-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-accent/90">Administration</div>
                 <div className="flex flex-col gap-0.5">
-                  {adminNav.map((item) => (
+                  {visibleAdminNav.map((item) => (
                     <NavItem key={item.to} item={item} pathname={pathname} onClick={() => setMobileOpen(false)} />
                   ))}
                 </div>
